@@ -16,29 +16,31 @@
             color: #eee; 
             margin: 0; 
             padding: 20px; 
-            gap: 15px; 
+            gap: 10px; /* Reduced gap for tighter layout */
         }
         #top-container { 
             display: flex; 
             flex-direction: row; 
             gap: 20px; 
-        }
-
-        /* NEW WRAPPER for Canvas and Bottom Controls */
-        #canvas-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            /* Allow this wrapper to define the alignment center for the bottom bar */
+            /* Fix: Use a container aligned with the map's width as the reference */
+            position: relative;
+            /* Ensure the overall page structure is centered based on the total block width */
+            width: 1344px; /* 1024 (Map) + 300 (Sidebar) + 20 (Gap) */
         }
         
         /* Canvas dimensions: 16:9 ratio (1024x576) */
+        #map-and-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
         canvas { 
             border: 1px solid #555; 
             background-color: #333; 
             width: 1024px; 
             height: 576px; 
-            flex-shrink: 0;
             cursor: grab;
         }
         canvas.dragging {
@@ -86,9 +88,6 @@
             flex-wrap: wrap;
             gap: 10px;
             justify-content: flex-start;
-            /* Removed from main body flow, now aligns relative to #canvas-wrapper parent */
-            margin-left: 0;
-            margin-right: auto;
         }
         .pt-control-box {
             flex: 0 0 calc(1024px / 9 - 11px); 
@@ -132,7 +131,8 @@
 </head>
 <body>
     <div id="top-container">
-        <div id="canvas-wrapper">
+        
+        <div id="map-and-controls">
             <canvas id="networkCanvas" width="1024" height="576"></canvas>
             <div id="pt-control-bar">
                 </div>
@@ -155,12 +155,10 @@
                 <label>Coverage Summary:</label>
                 <div id="coverageDetails" class="component-list"></div>
             </div>
-
             <div class="control-group">
                 <label>Active PT Validation:</label>
                 <div id="currentPTStates" class="component-list"></div>
             </div>
-
             <div class="control-group">
                 <label>Distances from Selected PT:</label>
                 <div id="distances" class="component-list"></div>
@@ -173,7 +171,6 @@
             </div>
         </div>
     </div>
-
 
     <script>
         // --- GLOBAL CONSTANTS & SETUP ---
@@ -190,7 +187,6 @@
         const powerRadii = { 0: 0.0, 1: 1.0, 2: 3.0, 3: 5.0, 4: 7.0 };
 
         // === ALL MAP DATA: FINAL PT and 24 RT PLACEMENT ===
-        // NOTE: Cities are still missing.
 
         const components = [
             // --- PTs A-L (Original State 1 Active Group) ---
@@ -208,12 +204,12 @@
             { id: 'PT-L', type: 'PT', x: 54.2, y: 32.8, active: false, power: 0, reqPower: 3, reqChannel: 1 },
 
             // --- PTs M-R (Original State 2 Active Group) ---
-            { id: 'PT-M', type: 'PT', x: 37.8, y: 19.5, active: false, power: 0, reqPower: 3, reqChannel: 2 }, // P3
-            { id: 'PT-N', type: 'PT', x: 7.5, y: 19.8, active: false, power: 0, reqPower: 2, reqChannel: 2 },  // P2
-            { id: 'PT-O', type: 'PT', x: 25.0, y: 23.3, active: false, power: 0, reqPower: 2, reqChannel: 3 },  // P2
-            { id: 'PT-P', type: 'PT', x: 57.8, y: 14.4, active: false, power: 0, reqPower: 4, reqChannel: 2 },  // P4
-            { id: 'PT-Q', type: 'PT', x: 55.7, y: 27.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },  // P3
-            { id: 'PT-R', type: 'PT', x: 32.0, y: 2.2,  active: false, power: 0, reqPower: 1, reqChannel: 1 },  // P1
+            { id: 'PT-M', type: 'PT', x: 37.8, y: 19.5, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+            { id: 'PT-N', type: 'PT', x: 7.5, y: 19.8, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+            { id: 'PT-O', type: 'PT', x: 25.0, y: 23.3, active: false, power: 0, reqPower: 4, reqChannel: 3 },
+            { id: 'PT-P', type: 'PT', x: 57.8, y: 14.4, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+            { id: 'PT-Q', type: 'PT', x: 55.7, y: 27.5, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+            { id: 'PT-R', type: 'PT', x: 32.0, y: 2.2,  active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
             
             // --- REPEATER TOWERS (RTs) - (Total 24 RTs) ---
             { id: 'RT1', type: 'RT', x: 5.6, y: 5.7 },
@@ -242,7 +238,6 @@
             { id: 'RT24', type: 'RT', x: 60.0, y: 30.0 },
 
             // --- CITIES (C) - N=12 ---
-
             { id: 'C1', type: 'C', x: 1.0, y: 14.0 },
             { id: 'C2', type: 'C', x: 1.0, y: 22.0 },
             { id: 'C3', type: 'C', x: 18.0, y: 18.0 },
@@ -256,6 +251,7 @@
             { id: 'C11', type: 'C', x: 32.0, y: 34.0 },
             { id: 'C12', type: 'C', x: 62.0, y: 26.0 }
         ];
+
 
         // === MOUNTAIN DATA (6 Smaller Rectangles, Unchanged) ===
         const mountains = [
@@ -281,6 +277,69 @@
         let dragTarget = null;
         let dragOffsetX = 0;
         let dragOffsetY = 0;
+
+        // --- CORE HANDLER FUNCTIONS (MUST BE DEFINED EARLY) ---
+
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.id.split('-')[2];
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
+
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    }
+                }
+                updateControlPanel();
+            }
+        }
+
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+        
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                pt.active = !pt.active;
+                
+                if (pt.active && pt.power === 0) {
+                    pt.power = 3; 
+                }
+                if (!pt.active) {
+                    pt.power = 0;
+                }
+            }
+            updateControlPanel();
+        }
+        
+        function selectPT(ptId) {
+            selectedPTSelect.value = ptId;
+            updateControlPanel(); 
+        }
 
         // --- GEOMETRIC AND BLOCKING LOGIC (Unchanged) ---
 
@@ -338,7 +397,7 @@
             return !isPathBlocked(source, target);
         }
        
-        // --- PUZZLE VALIDATION LOGIC ---
+        // --- PUZZLE VALIDATION LOGIC (Unchanged) ---
         function getPT_RT_HitCount(pt) {
             if (!pt.active || pt.power === 0) { return 0; }
             const ptRange = powerRadii[pt.power];
@@ -633,9 +692,11 @@
                 let newX = mousePos.x - dragOffsetX;
                 let newY = mousePos.y - dragOffsetY;
 
+                // Clamp to grid boundaries
                 newX = Math.max(0.0, Math.min(gridSizeX, newX));
                 newY = Math.max(0.0, Math.min(gridSizeY, newY));
 
+                // Update component position
                 dragTarget.x = parseFloat(newX.toFixed(1));
                 dragTarget.y = parseFloat(newY.toFixed(1));
                 
@@ -651,6 +712,30 @@
         });
         
         // --- UI/Logic Functions (Validation & Status) ---
+
+        // New: Outputs the current coordinates and power of all components for easy copying.
+        function updateCoordinateOutput() {
+            const outputDiv = document.getElementById('coordinateOutput');
+            let output = '<b>PT Coordinates (X, Y, Current Pwr):</b><br>';
+            
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, pwr: ${pt.power} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+            
+            output += '<b>RT Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                output += `<div>{ id: '${rt.id}', type: 'RT', x: ${rt.x.toFixed(1)}, y: ${rt.y.toFixed(1)} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+
+            output += '<b>City Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'C').forEach(city => {
+                output += `<div>{ id: '${city.id}', type: 'C', x: ${city.x.toFixed(1)}, y: ${city.y.toFixed(1)} },</div>`;
+            });
+
+            outputDiv.innerHTML = output;
+        }
 
         function updateAllDistances() {
             const selectedPTId = selectedPTSelect.value;
@@ -754,29 +839,6 @@
             updateManualControls();
         }
 
-        // New: Outputs the current coordinates of all components for easy copying.
-        function updateCoordinateOutput() {
-            let output = '<b>PT Coordinates (X, Y, Current Pwr):</b><br>';
-            
-            components.filter(c => c.type === 'PT').forEach(pt => {
-                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, pwr: ${pt.power} },</div>`;
-            });
-            output += '<hr style="border-color:#555">';
-            
-            output += '<b>RT Coordinates (X, Y):</b><br>';
-            components.filter(c => c.type === 'RT').forEach(rt => {
-                output += `<div>{ id: '${rt.id}', type: 'RT', x: ${rt.x.toFixed(1)}, y: ${rt.y.toFixed(1)} },</div>`;
-            });
-            output += '<hr style="border-color:#555">';
-
-            output += '<b>City Coordinates (X, Y):</b><br>';
-            components.filter(c => c.type === 'C').forEach(city => {
-                output += `<div>{ id: '${city.id}', type: 'C', x: ${city.x.toFixed(1)}, y: ${city.y.toFixed(1)} },</div>`;
-            });
-
-            coordinateOutputDiv.innerHTML = output;
-        }
-
         // New: Renders the dropdown controls for all 18 PTs below the map
         function createManualControls() {
             bottomPtControlsDiv.innerHTML = '';
@@ -826,29 +888,44 @@
             updateManualControls();
         }
 
-        // Updates the PT object when a dropdown is changed
-        function updatePTSetting(selectElement, type) {
-            
-            const ptId = selectElement.id.split('-')[2];
-            const newValue = parseInt(selectElement.value);
+        // --- NEW DELEGATED EVENT HANDLERS ---
 
-            const pt = components.find(c => c.id === ptId);
-            if (pt) {
-                if (currentSolveState !== 'custom') {
-                    solveStateSelect.value = 'custom';
-                    currentSolveState = 'custom';
-                }
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.id.split('-')[2];
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
 
-                if (type === 'power') {
-                    pt.power = newValue;
-                    pt.active = newValue > 0;
-                } else if (type === 'reqChannel') {
-                    pt.reqChannel = newValue;
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    }
                 }
+                updateControlPanel();
             }
-            updateControlPanel();
         }
 
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+        
         // Toggles active status
         function togglePT(ptId) {
             const pt = components.find(c => c.id === ptId);
@@ -904,23 +981,23 @@
             drawComponents();
             updateAllDistances();
             updateCoverageDetails();
-            updateCurrentPTStates(); 
-            updateCoordinateOutput(); // Added coordinate output call
+            updateCurrentPTStates();
+            updateCoordinateOutput(); 
         }
         
         function applySolveStatePresets(state) {
             currentSolveState = state;
 
-            const STATE1_OFF_IDS = ['PT-C', 'PT-F', 'PT-G', 'PT-J', 'PT-N', 'PT-Q']; // New S1 OFF rules
+            const STATE1_OFF_IDS = ['PT-C', 'PT-F', 'PT-G', 'PT-J', 'PT-N', 'PT-Q']; 
             const STATE2_IDS = ['PT-M', 'PT-N', 'PT-O', 'PT-P', 'PT-Q', 'PT-R'];
 
             // 1. Reset ALL PTs 
             components.filter(c => c.type === 'PT').forEach(pt => {
                 pt.active = false;
                 pt.power = 0;
-                // PTs maintain fixed channel requirements
+                // Reset required channel (Retain puzzle requirements for display)
                 if (pt.id.startsWith('PT-A') || pt.id.startsWith('PT-B') || pt.id.startsWith('PT-D') || pt.id.startsWith('PT-E') || pt.id.startsWith('PT-H') || pt.id.startsWith('PT-I') || pt.id.startsWith('PT-K') || pt.id.startsWith('PT-L')) pt.reqChannel = 1;
-                if (pt.id === 'PT-M' || pt.id === 'PT-P' || pt.id === 'PT-Q' || pt.id === 'PT-N' || pt.id === 'PT-C' || pt.id === 'PT-J') pt.reqChannel = 2;
+                if (pt.id === 'PT-C' || pt.id === 'PT-J' || pt.id === 'PT-M' || pt.id === 'PT-N' || pt.id === 'PT-P' || pt.id === 'PT-Q') pt.reqChannel = 2;
                 if (pt.id === 'PT-F' || pt.id === 'PT-G' || pt.id === 'PT-O') pt.reqChannel = 3;
                 if (pt.id === 'PT-R') pt.reqChannel = 1;
             });
