@@ -184,35 +184,35 @@
         const RT_FIXED_RADIUS = 4.0; // RTs fixed at 4.0U
 
         // Radii Mapping: P3 = 5.0U, P4 = 7.0U
-        const powerRadii = { 0: 0.0, 1: 1.0, 2: 3.0, 3: 5.0, 4: 7.0 };
+        const powerRadii = { 0: 0.0, 1: 2.0, 2: 4.0, 3: 6.0, 4: 8.5 };
 
         // === ALL MAP DATA: FINAL PT, 24 RT, and 16 CITY PLACEMENT ===
 
         const components = [
             // --- PTs A-L (Original State 1 Active Group) ---
             // Note: reqPower is derived from the power values provided in your list.
-            { id: 'PT-A', type: 'PT', x: 9.4, y: 11.1, active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
-            { id: 'PT-B', type: 'PT', x: 8.0,  y: 31.0, active: false, power: 0, reqPower: 3, reqChannel: 1 },
-            { id: 'PT-C', type: 'PT', x: 16.0, y: 18.0, active: false, power: 0, reqPower: 4, reqChannel: 2 }, 
-            { id: 'PT-D', type: 'PT', x: 19.9, y: 4.9,  active: false, power: 0, reqPower: 3, reqChannel: 1 },
-            { id: 'PT-E', type: 'PT', x: 21.0, y: 31.1, active: false, power: 0, reqPower: 3, reqChannel: 1 },
-            { id: 'PT-F', type: 'PT', x: 32.0, y: 12.0, active: false, power: 0, reqPower: 4, reqChannel: 3 }, 
-            { id: 'PT-G', type: 'PT', x: 32.0, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 3 }, 
-            { id: 'PT-H', type: 'PT', x: 43.0, y: 5.9,  active: false, power: 0, reqPower: 3, reqChannel: 1 },
-            { id: 'PT-I', type: 'PT', x: 41.9, y: 31.1, active: false, power: 0, reqPower: 3, reqChannel: 1 },
-            { id: 'PT-J', type: 'PT', x: 48.5, y: 18.1, active: false, power: 0, reqPower: 4, reqChannel: 2 }, 
-            { id: 'PT-K', type: 'PT', x: 56.8, y: 4.8,  active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
-            { id: 'PT-L', type: 'PT', x: 54.2, y: 32.8, active: false, power: 0, reqPower: 3, reqChannel: 1 },
+            { id: 'PT-A', type: 'PT', x: 11.3, y: 9.7, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 }, 
+            { id: 'PT-B', type: 'PT', x: 9.9,  y: 27.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
+            { id: 'PT-C', type: 'PT', x: 18.7, y: 19.9, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3 }, 
+            { id: 'PT-D', type: 'PT', x: 22.8, y: 8.5,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
+            { id: 'PT-E', type: 'PT', x: 21.0, y: 31.1, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
+            { id: 'PT-F', type: 'PT', x: 37.4, y: 13.2, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3 }, 
+            { id: 'PT-G', type: 'PT', x: 31.4, y: 22.7, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3 }, 
+            { id: 'PT-H', type: 'PT', x: 59.3, y: 18.3,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
+            { id: 'PT-I', type: 'PT', x: 40.1, y: 29.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
+            { id: 'PT-J', type: 'PT', x: 48.5, y: 18.1, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3 }, 
+            { id: 'PT-K', type: 'PT', x: 51.4, y: 8.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 }, 
+            { id: 'PT-L', type: 'PT', x: 53.2, y: 27.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
 
             // --- PTs M-R (Original State 2 Active Group) ---
-            { id: 'PT-M', type: 'PT', x: 37.8, y: 19.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
-            { id: 'PT-N', type: 'PT', x: 7.5, y: 19.8, active: false, power: 0, reqPower: 4, reqChannel: 2 },
-            { id: 'PT-O', type: 'PT', x: 25.0, y: 23.3, active: false, power: 0, reqPower: 3, reqChannel: 3 },
-            { id: 'PT-P', type: 'PT', x: 57.8, y: 14.4, active: false, power: 0, reqPower: 4, reqChannel: 2 },
-            { id: 'PT-Q', type: 'PT', x: 55.7, y: 27.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
-            { id: 'PT-R', type: 'PT', x: 32.0, y: 2.2,  active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
+//            { id: 'PT-M', type: 'PT', x: 37.8, y: 19.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
+//            { id: 'PT-N', type: 'PT', x: 7.5, y: 19.8, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+//            { id: 'PT-O', type: 'PT', x: 25.0, y: 23.3, active: false, power: 0, reqPower: 3, reqChannel: 3 },
+//            { id: 'PT-P', type: 'PT', x: 57.8, y: 14.4, active: false, power: 0, reqPower: 4, reqChannel: 2 },
+//            { id: 'PT-Q', type: 'PT', x: 55.7, y: 27.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
+//            { id: 'PT-R', type: 'PT', x: 32.0, y: 2.2,  active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
             
-            // --- REPEATER TOWERS (RTs) - (Total 24 RTs) ---
+/*            // --- REPEATER TOWERS (RTs) - (Total 24 RTs) ---
             { id: 'RT1', type: 'RT', x: 5.6, y: 5.7 },
             { id: 'RT2', type: 'RT', x: 14.2, y: 12.3 },
             { id: 'RT3', type: 'RT', x: 4.0, y: 32.9 },
@@ -237,7 +237,7 @@
             { id: 'RT22', type: 'RT', x: 61.6, y: 11.6 }, 
             { id: 'RT23', type: 'RT', x: 32.8, y: 2.5 }, 
             { id: 'RT24', type: 'RT', x: 60.0, y: 30.0 }, 
-
+*/
             // --- CITIES (C) - N=16 (FINAL LIST) ---
             { id: 'C1', type: 'C', x: 14.9, y: 15.3 },
             { id: 'C2', type: 'C', x: 1.4, y: 34.9 },
@@ -321,6 +321,7 @@
             }
         }
         
+        // Toggles active status
         function togglePT(ptId) {
             const pt = components.find(c => c.id === ptId);
             if (pt) {
@@ -718,12 +719,13 @@
         
         // --- UI/Logic Functions (Validation & Status) ---
 
-        // Updates the PT object when a dropdown is changed
-        function updatePTSetting(newValueString, type, ptId) {
-            
-            const newValue = parseInt(newValueString);
+        // --- Function: updatePTSetting (around line 723) ---
+        function updatePTSetting(selectElement, type) {
+        // FIX: Get the ID and value from the passed element (selectElement)
+            const ptId = selectElement.getAttribute('data-pt-id'); 
+            const newValue = parseInt(selectElement.value);
+
             const pt = components.find(c => c.id === ptId);
-            
             if (pt) {
                 if (currentSolveState !== 'custom') {
                     solveStateSelect.value = 'custom';
@@ -733,6 +735,10 @@
                 if (type === 'power') {
                     pt.power = newValue;
                     pt.active = newValue > 0;
+                    // FIX 1: Save the manual power to lastPower
+                    if (newValue > 0) { 
+                        pt.lastPower = newValue; 
+                    }
                 } else if (type === 'reqChannel') {
                     pt.reqChannel = newValue;
                 }
@@ -740,13 +746,44 @@
             updateControlPanel();
         }
 
-        // New: Outputs the current coordinates and power of all components for easy copying.
+
+        // --- Function: togglePT (around line 748) ---
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                if (pt.active) {
+                    // ACTION: Turning OFF. Save current power, set active/power to 0.
+                    pt.lastPower = pt.power; // Save active power
+                    pt.active = false;
+                    pt.power = 0;
+                } else {
+                    // ACTION: Turning ON. Restore the last saved power.
+                    pt.active = true;
+                    pt.power = pt.lastPower || pt.reqPower; // Use lastPower, default to reqPower
+                }
+            }
+            updateControlPanel();
+        }
+
+    // New: Outputs the current coordinates and power of all components for easy copying.
         function updateCoordinateOutput() {
             const outputDiv = document.getElementById('coordinateOutput');
-            let output = '<b>PT Coordinates (X, Y, Current Pwr):</b><br>';
+            let output = '<b>PT Coordinates (X, Y, Pwr, Last Pwr, Live Hits):</b><br>';
             
+            // Get active RTs for accurate City Coverage check
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
             components.filter(c => c.type === 'PT').forEach(pt => {
-                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, pwr: ${pt.power} },</div>`;
+                const liveCh = getPT_RT_HitCount(pt);
+                const cityCovered = doesPtCoverAnyCity(pt, activeRTs) ? '✅' : '❌';
+                const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
+
+                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, reqP: ${pt.reqPower}, liveP: ${powerDisplay}, liveCh: ${liveCh}, city: '${cityCovered}' },</div>`;
             });
             output += '<hr style="border-color:#555">';
             
@@ -869,53 +906,53 @@
 // --- Replace the createManualControls function block (around line 770 in your file) ---
 
 // New: Renders the dropdown controls for all 18 PTs below the map
-function createManualControls() {
-    bottomPtControlsDiv.innerHTML = '';
-    const allPTs = components.filter(c => c.type === 'PT');
+        function createManualControls() {
+            bottomPtControlsDiv.innerHTML = '';
+            const allPTs = components.filter(c => c.type === 'PT');
 
-    allPTs.forEach(pt => {
-        const liveChannel = getPT_RT_HitCount(pt);
-        
-        let powerOptions = '';
-        for (let p = 0; p <= 4; p++) {
-            powerOptions += `<option value="${p}" ${pt.power === p ? 'selected' : ''}>P${p}</option>`;
-        }
-        
-        let channelOptions = '';
-        for (let c = 1; c <= 3; c++) {
-            channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
-        }
-        
-        const controlHTML = `
-            <div class="pt-control-box" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
-                <h5>${pt.id}</h5>
+            allPTs.forEach(pt => {
+                const liveChannel = getPT_RT_HitCount(pt);
                 
-                <div class="control-status-row">
-                    <button id="toggle-${pt.id}" 
-                        onclick="togglePT('${pt.id}'); event.stopPropagation();">
-                        ${pt.active ? 'Active' : 'Inactive'}
-                    </button>
-                    <select id="pwr-sel-${pt.id}" 
-                            onchange="updatePTSetting(this.value, 'power', '${pt.id}');">
-                        ${powerOptions}
-                    </select>
-                </div>
+                let powerOptions = '';
+                for (let p = 0; p <= 4; p++) {
+                    powerOptions += `<option value="${p}" ${pt.power === p ? 'selected' : ''}>P${p}</option>`;
+                }
+                
+                let channelOptions = '';
+                for (let c = 1; c <= 3; c++) {
+                    channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
+                }
+                
+// --- CORRECTED INLINE HANDLERS ---
+                const controlHTML = `
+                    <div class="pt-control-box" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
+                        <h5>${pt.id}</h5>
+                        
+                        <div class="control-status-row">
+                            <button id="toggle-${pt.id}" 
+                                onclick="togglePT('${pt.id}'); event.stopPropagation();">
+                                ${pt.active ? 'Active' : 'Inactive'}
+                            </button>
+                            <select id="pwr-sel-${pt.id}" data-pt-id="${pt.id}" data-type="power"
+                                    onchange="updatePTSetting(this, 'power');"> 
+                                ${powerOptions}
+                            </select>
+                        </div>
 
-                <div class="control-status-row">
-                    <select id="req-ch-sel-${pt.id}" 
-                            onchange="updatePTSetting(this.value, 'reqChannel', '${pt.id}');">
-                        ${channelOptions}
-                    </select>
-                    <span class="live-ch-status" id="live-ch-val-${pt.id}">L: ${liveChannel}</span>
-                </div>
-            </div>
-        `;
-        bottomPtControlsDiv.innerHTML += controlHTML;
-    });
-    
-    // NOTE: Removed delegated listeners (handleControlChange, handleControlClick)
-    updateManualControls();
-}
+                        <div class="control-status-row">
+                            <select id="req-ch-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqChannel"
+                                    onchange="updatePTSetting(this, 'reqChannel');"> 
+                                ${channelOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-ch-val-${pt.id}">L: ${liveChannel}</span>
+                        </div>
+                    </div>
+                `;
+                bottomPtControlsDiv.innerHTML += controlHTML;
+            });
+            // NOTE: Removed delegated listeners in favor of direct inline calls.
+            updateManualControls();
+        }
 
         // --- NEW DELEGATED EVENT HANDLERS ---
 
@@ -954,28 +991,6 @@ function createManualControls() {
                 selectPT(ptId);
             }
         }
-        
-        // Toggles active status
-        function togglePT(ptId) {
-                    // FIX: Ensure state switches to custom and changes are applied.
-                    const pt = components.find(c => c.id === ptId);
-                    if (pt) {
-                         if (currentSolveState !== 'custom') {
-                            solveStateSelect.value = 'custom';
-                            currentSolveState = 'custom';
-                        }
-
-                        pt.active = !pt.active;
-                        
-                        if (pt.active && pt.power === 0) {
-                            pt.power = 3; 
-                        }
-                        if (!pt.active) {
-                            pt.power = 0;
-                        }
-                    }
-                    updateControlPanel();
-                }
         
         function selectPT(ptId) {
             selectedPTSelect.value = ptId;
