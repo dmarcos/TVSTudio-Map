@@ -75,6 +75,49 @@
         .solved { font-weight: bold; font-size: 1.2em; color: #0f0; text-align: center; }
         .not-solved { font-weight: bold; font-size: 1.2em; color: lightcoral; text-align: center; }
 
+        /* --- Legend Styles --- */
+        .legend-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 5px 0 0 0; /* Small top margin */
+        }
+        .legend-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            margin-right: 10px;
+            flex-shrink: 0;
+            border: 1px solid #888;
+        }
+        .pt-dot {
+            background-color: skyblue;
+            border-radius: 50%;
+        }
+        .rt-dot {
+            background-color: yellow;
+            border-radius: 50%;
+        }
+        .city-dot {
+            background-color: lightcoral;
+            border-radius: 50%;
+        }
+        .mountain-box {
+            background-color: rgba(0, 100, 0, 0.5);
+            border: 1px solid darkgreen;
+            border-radius: 0; /* Make it a box */
+            width: 16px; /* Slightly wider */
+        }
+
+        /* Style for the collapsible section */
+        #collapsible-controls.collapsed {
+              display: none;
+        }
+
         /* --- PT Controls Bar Below Map --- */
         #pt-control-bar {
             width: 1024px; 
@@ -86,12 +129,13 @@
             border: 1px solid #555;
             display: flex; 
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px; /* Increased gap for 6 columns */
             justify-content: flex-start;
         }
         .pt-control-box {
-            flex: 0 0 calc(1024px / 9 - 11px); 
-            max-width: calc(1024px / 9 - 11px);
+            /* Calculated to fit 6 columns cleanly */
+            flex: 0 0 calc(1024px / 6 - 15px); 
+            max-width: calc(1024px / 6 - 15px);
             box-sizing: border-box; 
             background-color: #444;
             padding: 8px;
@@ -106,6 +150,12 @@
             font-size: 0.9em;
             text-align: center;
         }
+        /* New Highlight Style */
+       .pt-control-box.highlight {
+           background-color: #9f3679; /* A distinct pink/purple */
+           border-left-color: #ff69b4; /* Pink border */
+        }
+
         .control-status-row {
             display: flex;
             justify-content: space-between;
@@ -140,16 +190,32 @@
 
         <div id="controls">
             <h3>Pylon Puzzle Controls</h3>
-            <div class="control-group">
+<div class="control-group">
                 <label for="solveState">Select Solve State:</label>
                 <select id="solveState">
-                    <option value="state1">Solve State 1 (PT-A to L)</option>
-                    <option value="state2">Solve State 2 (PT-M to R)</option>
+                    <option value="first">Initial State</option>
+                    <option value="state1">Solve State 1 (D,E,G,J,L Off)</option>
+ <!-- took this out -->
+ <!-- <option value="state2">Solve State 2 (TBD)</option> -->
                     <option value="custom">Custom (Manual Control)</option>
                 </select>
+              <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Show Advanced Details</button>
+                        </div>
+
+                    <div class="control-group" id="legend">
+                <label>Legend:</label>
+                <ul class="legend-list">
+                    <li><span class="legend-dot pt-dot"></span> PT-# = Broadcast Towers</li>
+                    <li><span class="legend-dot rt-dot"></span> RT# = Repeater Towers</li>
+                    <li><span class="legend-dot city-dot"></span> C# = Cities</li>
+                    <li><span class="legend-dot mountain-box"></span> = Mountains</li>
+                </ul>
+            </div>
+
+            <div id="collapsible-controls">
+
                 <label for="selectedPT">Select PT to Inspect:</label>
                 <select id="selectedPT"></select>
-            </div>
 
             <div class="control-group">
                 <label>Coverage Summary:</label>
@@ -168,6 +234,8 @@
                 <label>Current Component Coordinates (X/Y):</label>
                 <div id="coordinateOutput" class="component-list">
                     </div>
+           </div>
+            </div>
             </div>
         </div>
     </div>
@@ -189,79 +257,63 @@
         // === ALL MAP DATA: FINAL PT, 24 RT, and 16 CITY PLACEMENT ===
 
         const components = [
-            // --- PTs A-L (Original State 1 Active Group) ---
-            // Note: reqPower is derived from the power values provided in your list.
-            { id: 'PT-A', type: 'PT', x: 11.3, y: 9.7, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 }, 
-            { id: 'PT-B', type: 'PT', x: 9.9,  y: 27.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-            { id: 'PT-C', type: 'PT', x: 18.7, y: 19.9, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3 }, 
-            { id: 'PT-D', type: 'PT', x: 22.8, y: 8.5,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-            { id: 'PT-E', type: 'PT', x: 21.0, y: 31.1, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-            { id: 'PT-F', type: 'PT', x: 37.4, y: 13.2, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3 }, 
-            { id: 'PT-G', type: 'PT', x: 31.4, y: 22.7, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3 }, 
-            { id: 'PT-H', type: 'PT', x: 59.3, y: 18.3,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-            { id: 'PT-I', type: 'PT', x: 40.1, y: 29.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-            { id: 'PT-J', type: 'PT', x: 48.5, y: 18.1, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3 }, 
-            { id: 'PT-K', type: 'PT', x: 51.4, y: 8.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 }, 
-            { id: 'PT-L', type: 'PT', x: 53.2, y: 27.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3 },
-
-            // --- PTs M-R (Original State 2 Active Group) ---
-//            { id: 'PT-M', type: 'PT', x: 37.8, y: 19.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
-//            { id: 'PT-N', type: 'PT', x: 7.5, y: 19.8, active: false, power: 0, reqPower: 4, reqChannel: 2 },
-//            { id: 'PT-O', type: 'PT', x: 25.0, y: 23.3, active: false, power: 0, reqPower: 3, reqChannel: 3 },
-//            { id: 'PT-P', type: 'PT', x: 57.8, y: 14.4, active: false, power: 0, reqPower: 4, reqChannel: 2 },
-//            { id: 'PT-Q', type: 'PT', x: 55.7, y: 27.5, active: false, power: 0, reqPower: 3, reqChannel: 2 },
-//            { id: 'PT-R', type: 'PT', x: 32.0, y: 2.2,  active: false, power: 0, reqPower: 3, reqChannel: 1 }, 
+            // --- PTs A-L (12 Total) ---
+            { id: 'PT-A', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 3 }, 
+            { id: 'PT-B', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 1, highlight: false, reqCities: 1 },
+            { id: 'PT-C', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3, highlight: false, reqCities: 4 }, 
+            { id: 'PT-D', type: 'PT', x: 24.1, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-E', type: 'PT', x: 24.0, y: 29.9, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-F', type: 'PT', x: 31.8, y: 23.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 }, 
             
-/*            // --- REPEATER TOWERS (RTs) - (Total 24 RTs) ---
-            { id: 'RT1', type: 'RT', x: 5.6, y: 5.7 },
-            { id: 'RT2', type: 'RT', x: 14.2, y: 12.3 },
-            { id: 'RT3', type: 'RT', x: 4.0, y: 32.9 },
-            { id: 'RT4', type: 'RT', x: 24.5, y: 6.4 },
-            { id: 'RT5', type: 'RT', x: 9.4, y: 18.0 },
-            { id: 'RT6', type: 'RT', x: 36.5, y: 23.6 },
-            { id: 'RT7', type: 'RT', x: 37.2, y: 9.8 },
-            { id: 'RT8', type: 'RT', x: 22.0, y: 26.8 },
-            { id: 'RT9', type: 'RT', x: 33.2, y: 18.4 },
-            { id: 'RT10', type: 'RT', x: 27.5, y: 33.3 },
-            { id: 'RT11', type: 'RT', x: 35.8, y: 33.7 },
-            { id: 'RT12', type: 'RT', x: 25.4, y: 11.2 },
-            { id: 'RT13', type: 'RT', x: 29.2, y: 23.0 },
-            { id: 'RT14', type: 'RT', x: 50.2, y: 12.3 },
-            { id: 'RT15', type: 'RT', x: 54.6, y: 18.1 },
-            { id: 'RT16', type: 'RT', x: 9.0, y: 22.2 },
-            { id: 'RT17', type: 'RT', x: 41.6, y: 27.1 },
-            { id: 'RT18', type: 'RT', x: 52.6, y: 28.6 },
-            { id: 'RT19', type: 'RT', x: 59.6, y: 3.8 },
-            { id: 'RT20', type: 'RT', x: 47.6, y: 7.1 },
-            { id: 'RT21', type: 'RT', x: 25.8, y: 18.9 },
-            { id: 'RT22', type: 'RT', x: 61.6, y: 11.6 }, 
-            { id: 'RT23', type: 'RT', x: 32.8, y: 2.5 }, 
-            { id: 'RT24', type: 'RT', x: 60.0, y: 30.0 }, 
-*/
-            // --- CITIES (C) - N=16 (FINAL LIST) ---
-            { id: 'C1', type: 'C', x: 14.9, y: 15.3 },
-            { id: 'C2', type: 'C', x: 1.4, y: 34.9 },
-            { id: 'C3', type: 'C', x: 32.9, y: 23.4 },
-            { id: 'C4', type: 'C', x: 20.4, y: 24.9 },
-            { id: 'C5', type: 'C', x: 27.0, y: 8.8 },
-            { id: 'C6', type: 'C', x: 28.0, y: 22.0 },
-            { id: 'C7', type: 'C', x: 49.6, y: 9.3 },
-            { id: 'C8', type: 'C', x: 49.9, y: 28.1 },
-            { id: 'C9', type: 'C', x: 51.4, y: 18.2 },
-            { id: 'C10', type: 'C', x: 32.0, y: 6.0 },
-            { id: 'C11', type: 'C', x: 38.8, y: 25.8 },
-            { id: 'C12', type: 'C', x: 62.8, y: 1.6 },
-            { id: 'C13', type: 'C', x: 2.3, y: 21.2 },
-            { id: 'C14', type: 'C', x: 2.4, y: 22.7 },
-            { id: 'C15', type: 'C', x: 1.3, y: 17.4 },
-            { id: 'C16', type: 'C', x: 1.6, y: 19.5 }
-        ];
+            { id: 'PT-G', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-H', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-I', type: 'PT', x: 55.5, y: 29.1, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-J', type: 'PT', x: 47.0, y: 17.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-K', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 2 },
+            { id: 'PT-L', type: 'PT', x: 60.1, y: 17.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3, highlight: false, reqCities: 1 },
 
+            // --- REPEATER TOWERS (RTs) - (Total 15 RTs) ---
+            { id: 'RT1', type: 'RT', x: 6.8, y: 17.3 },
+            { id: 'RT2', type: 'RT', x: 8.6, y: 29.1 },
+            { id: 'RT3', type: 'RT', x: 16.0, y: 4.1 },
+            { id: 'RT4', type: 'RT', x: 5.9, y: 3.8 },
+            { id: 'RT5', type: 'RT', x: 22.0, y: 12.9 },
+            { id: 'RT6', type: 'RT', x: 24.4, y: 21.1 },
+            { id: 'RT7', type: 'RT', x: 31.8, y: 6.5 },
+            { id: 'RT8', type: 'RT', x: 37.1, y: 21.1 },
+            { id: 'RT9', type: 'RT', x: 32.3, y: 29.9 },
+            { id: 'RT10', type: 'RT', x: 47.0, y: 25.5 },
+            { id: 'RT11', type: 'RT', x: 58.3, y: 31.2 },
+            { id: 'RT12', type: 'RT', x: 59.1, y: 13.6 },
+            { id: 'RT13', type: 'RT', x: 47.0, y: 3.4 },
+            { id: 'RT14', type: 'RT', x: 3.0, y: 10.9 },
+            { id: 'RT15', type: 'RT', x: 58.1, y: 3.5 },
+
+            // --- CITIES (C) - (Total 18 Cities) ---
+            { id: 'C1', type: 'C', x: 5.3, y: 20.2 },
+            { id: 'C2', type: 'C', x: 6.8, y: 32.0 },
+            { id: 'C3', type: 'C', x: 16.9, y: 22.2 },
+            { id: 'C4', type: 'C', x: 3.7, y: 1.6 },
+            { id: 'C5', type: 'C', x: 16.3, y: 0.7 },
+            { id: 'C6', type: 'C', x: 21.2, y: 10.0 },
+            { id: 'C7', type: 'C', x: 27.5, y: 19.7 },
+            { id: 'C8', type: 'C', x: 23.4, y: 24.5 },
+            { id: 'C9', type: 'C', x: 28.9, y: 4.2 },
+            { id: 'C10', type: 'C', x: 36.1, y: 17.6 },
+            { id: 'C11', type: 'C', x: 44.1, y: 16.7 },
+            { id: 'C12', type: 'C', x: 44.5, y: 10.7 },
+            { id: 'C13', type: 'C', x: 38.8, y: 24.4 },
+            { id: 'C14', type: 'C', x: 29.8, y: 27.3 },
+            { id: 'C15', type: 'C', x: 48.3, y: 23.4 },
+            { id: 'C16', type: 'C', x: 47.5, y: 29.4 },
+            { id: 'C17', type: 'C', x: 59.8, y: 34.2 },
+            { id: 'C18', type: 'C', x: 61.7, y: 11.5 }
+        ];
 
         // === MOUNTAIN DATA (6 Smaller Rectangles, Unchanged) ===
         const mountains = [
             { id: 'M1', x: 10, y: 14, w: 4, h: 3 }, 
-            { id: 'M2', x: 10, y: 19, w: 4, h: 3 }, 
+            { id: 'M2', x: 14, y: 25, w: 4, h: 3 }, 
             { id: 'M3', x: 28, y: 8, w: 4, h: 3 },  
             { id: 'M4', x: 32, y: 25, w: 4, h: 3 }, 
             { id: 'M5', x: 50, y: 14, w: 4, h: 3 },
@@ -415,6 +467,33 @@
             return hitCount;
         }
 
+        // NEW: Calculates how many Cities are covered *by this specific PT*
+        function getPTCityHitCount(pt) {
+            if (!pt.active || pt.power === 0) return 0;
+            
+            const ptRange = powerRadii[pt.power];
+            const cities = components.filter(c => c.type === 'C');
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            let hitCount = 0;
+
+            cities.forEach(city => {
+                // Check 1: Direct hit (PT -> City)
+                const isDirectHit = isSignalSuccessful(pt, city, ptRange);
+                
+                // Check 2: Single hop hit (PT -> RT -> City)
+                const isIndirectHit = activeRTs.some(rt => 
+                    isSignalSuccessful(pt, rt, ptRange) && isSignalSuccessful(rt, city, RT_FIXED_RADIUS)
+                );
+
+                if (isDirectHit || isIndirectHit) {
+                    hitCount++;
+                }
+            });
+
+            return hitCount;
+        }
+
         function doesPtCoverAnyCity(pt, allActiveRTs) {
             if (!pt.active || pt.power === 0) return false;
             const ptRange = powerRadii[pt.power];
@@ -551,9 +630,24 @@
                 let startAngle = 0;
                 let lastAngleWasClear = false;
                 
-                const fill_color = isPT ? 'rgba(0, 191, 255, 0.08)' : 'rgba(255, 255, 0, 0.06)';
-                const border_color = isPT ? 'rgba(0, 191, 255, 0.6)' : 'rgba(255, 255, 0, 0.5)';
-                const blocked_color = isPT ? 'rgba(0, 100, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)';
+                // --- COLOR DEFINITIONS ---
+                // Default colors (Blue for PT, Yellow for RT)
+                let fill_color = isPT ? 'rgba(0, 191, 255, 0.08)' : 'rgba(255, 255, 0, 0.06)';
+                let border_color = isPT ? 'rgba(0, 191, 255, 0.6)' : 'rgba(255, 255, 0, 0.5)';
+                let blocked_color = isPT ? 'rgba(0, 100, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)';
+
+                // --- HIGHLIGHT OVERRIDE ---
+                // NEW: Check for highlight property
+                if (isPT && component.highlight) {
+                    ctx.setLineDash([5, 3]); // Dashed line pattern
+                    // Override default colors with pink
+                    fill_color = 'rgba(255, 105, 180, 0.08)'; // Pink fill
+                    border_color = 'rgba(255, 105, 180, 0.6)'; // Pink border
+                    blocked_color = 'rgba(255, 105, 180, 0.1)'; // Faded pink
+                } else {
+                    ctx.setLineDash([]); // Solid line
+                }
+                // --- END OF FIX ---
 
 
                 for (let angle = 0; angle <= 360; angle += angleStep) {
@@ -613,6 +707,9 @@
                 if (lastAngleWasClear) {
                     drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, fullCircle);
                 }
+                
+                // Ensure dashed lines are reset
+                ctx.setLineDash([]);
             }
             
             // 1. Draw PT ranges
@@ -719,9 +816,11 @@
         
         // --- UI/Logic Functions (Validation & Status) ---
 
-        // --- Function: updatePTSetting (around line 723) ---
-        function updatePTSetting(selectElement, type) {
-        // FIX: Get the ID and value from the passed element (selectElement)
+        // Updates the PT object when a dropdown is changed
+        function updatePTSetting(selectElement, type) { 
+            
+            // FIX: Use the 'data-pt-id' attribute to get the correct ID,
+            // instead of splitting the 'id' string.
             const ptId = selectElement.getAttribute('data-pt-id'); 
             const newValue = parseInt(selectElement.value);
 
@@ -770,20 +869,21 @@
             updateControlPanel();
         }
 
-    // New: Outputs the current coordinates and power of all components for easy copying.
+        // New: Outputs the current coordinates and power of all components for easy copying.
         function updateCoordinateOutput() {
             const outputDiv = document.getElementById('coordinateOutput');
-            let output = '<b>PT Coordinates (X, Y, Pwr, Last Pwr, Live Hits):</b><br>';
+            let output = '<b>PT Coordinates (X, Y, Pwr, Req Ch/City, Live Hits):</b><br>';
             
             // Get active RTs for accurate City Coverage check
             const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
 
             components.filter(c => c.type === 'PT').forEach(pt => {
                 const liveCh = getPT_RT_HitCount(pt);
-                const cityCovered = doesPtCoverAnyCity(pt, activeRTs) ? '✅' : '❌';
+                const liveCity = getPTCityHitCount(pt, activeRTs); 
                 const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
+                const activeStatus = pt.active ? 'ON' : 'OFF'; // NEW: Capture active status
 
-                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, reqP: ${pt.reqPower}, liveP: ${powerDisplay}, liveCh: ${liveCh}, city: '${cityCovered}' },</div>`;
+                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, active: '${activeStatus}', reqP: ${pt.reqPower}, reqCh: ${pt.reqChannel}, reqCity: ${pt.reqCities}, liveP: ${powerDisplay}, liveCh: ${liveCh}, liveCity: ${liveCity} },</div>`;
             });
             output += '<hr style="border-color:#555">';
             
@@ -903,15 +1003,18 @@
             updateManualControls();
         }
 
-// --- Replace the createManualControls function block (around line 770 in your file) ---
-
-// New: Renders the dropdown controls for all 18 PTs below the map
+        // Renders the dropdown controls for all 12 PTs below the map
         function createManualControls() {
             bottomPtControlsDiv.innerHTML = '';
             const allPTs = components.filter(c => c.type === 'PT');
 
             allPTs.forEach(pt => {
                 const liveChannel = getPT_RT_HitCount(pt);
+                // FIX: Use the individual PT hit counter for initialization
+                const liveCityCount = getPTCityHitCount(pt); 
+// - to change over the affected boxes so you know which ones are bad signals when designing
+//                const highlightClass = pt.highlight ? 'highlight' : '';
+                const highlightClass = ''; // Apply highlight class
                 
                 let powerOptions = '';
                 for (let p = 0; p <= 4; p++) {
@@ -919,38 +1022,51 @@
                 }
                 
                 let channelOptions = '';
-                for (let c = 1; c <= 3; c++) {
+                for (let c = 1; c <= 4; c++) {
                     channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
                 }
                 
-// --- CORRECTED INLINE HANDLERS ---
-                const controlHTML = `
-                    <div class="pt-control-box" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
+                // NEW: Options for required Cities (set max to 5)
+                let reqCitiesOptions = '';
+                for (let c = 1; c <= 5; c++) {
+                    reqCitiesOptions += `<option value="${c}" ${pt.reqCities === c ? 'selected' : ''}>Req C ${c}</option>`;
+                }
+                
+const controlHTML = `
+                    <div class="pt-control-box ${highlightClass}" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
                         <h5>${pt.id}</h5>
                         
                         <div class="control-status-row">
-                            <button id="toggle-${pt.id}" 
-                                onclick="togglePT('${pt.id}'); event.stopPropagation();">
+                            <button id="toggle-${pt.id}" data-pt-id="${pt.id}">
                                 ${pt.active ? 'Active' : 'Inactive'}
                             </button>
-                            <select id="pwr-sel-${pt.id}" data-pt-id="${pt.id}" data-type="power"
-                                    onchange="updatePTSetting(this, 'power');"> 
+                            <select id="pwr-sel-${pt.id}" data-pt-id="${pt.id}" data-type="power">
                                 ${powerOptions}
                             </select>
                         </div>
 
                         <div class="control-status-row">
-                            <select id="req-ch-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqChannel"
-                                    onchange="updatePTSetting(this, 'reqChannel');"> 
+                            <select id="req-ch-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqChannel">
                                 ${channelOptions}
                             </select>
                             <span class="live-ch-status" id="live-ch-val-${pt.id}">L: ${liveChannel}</span>
+                        </div>
+                        
+                        <div class="control-status-row">
+                            <select id="req-cities-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqCities">
+                                ${reqCitiesOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-city-val-${pt.id}">C: ${getPTCityHitCount(pt)}</span>
                         </div>
                     </div>
                 `;
                 bottomPtControlsDiv.innerHTML += controlHTML;
             });
-            // NOTE: Removed delegated listeners in favor of direct inline calls.
+            
+            // Add event listeners (unchanged)
+            bottomPtControlsDiv.addEventListener('change', handleControlChange);
+            bottomPtControlsDiv.addEventListener('click', handleControlClick);
+
             updateManualControls();
         }
 
@@ -959,7 +1075,7 @@
         function handleControlChange(event) {
             const target = event.target;
             if (target.tagName === 'SELECT') {
-                const ptId = target.id.split('-')[2];
+                const ptId = target.getAttribute('data-pt-id');
                 const type = target.getAttribute('data-type');
                 const newValue = parseInt(target.value);
 
@@ -973,8 +1089,11 @@
                     if (type === 'power') {
                         pt.power = newValue;
                         pt.active = newValue > 0;
+                        if (newValue > 0) { pt.lastPower = newValue; }
                     } else if (type === 'reqChannel') {
                         pt.reqChannel = newValue;
+                    } else if (type === 'reqCities') { // NEW: Handle required cities
+                        pt.reqCities = newValue;
                     }
                 }
                 updateControlPanel();
@@ -997,18 +1116,23 @@
             updateControlPanel(); 
         }
         
-        // Updates the UI state of the controls when data changes
+         // Updates the UI state of the controls when data changes
         function updateManualControls() {
             components.filter(c => c.type === 'PT').forEach(pt => {
                 const liveChannel = getPT_RT_HitCount(pt);
+                // FIX: Call the new individual hit counter
+                const liveCityCount = getPTCityHitCount(pt); 
                 
                 const powerSelect = document.getElementById(`pwr-sel-${pt.id}`);
                 const channelSelect = document.getElementById(`req-ch-sel-${pt.id}`);
+                const reqCitySelect = document.getElementById(`req-city-sel-${pt.id}`);
                 const toggleBtn = document.getElementById(`toggle-${pt.id}`);
                 const liveChSpan = document.getElementById(`live-ch-val-${pt.id}`);
-                
+                const liveCitySpan = document.getElementById(`live-city-val-${pt.id}`); 
+
                 // Update live data and visual state
                 if (liveChSpan) liveChSpan.textContent = liveChannel;
+                if (liveCitySpan) liveCitySpan.textContent = liveCityCount; // UPDATE CITY COUNT
                 
                 if (toggleBtn) {
                     toggleBtn.textContent = pt.active ? 'Active' : 'Inactive';
@@ -1018,6 +1142,7 @@
                 // Ensure dropdown values match the PT object state
                 if (powerSelect) powerSelect.value = pt.power;
                 if (channelSelect) channelSelect.value = pt.reqChannel;
+                if (reqCitySelect) reqCitySelect.value = pt.reqCities;
             });
         }
         
@@ -1033,26 +1158,57 @@
         function applySolveStatePresets(state) {
             currentSolveState = state;
 
-            const STATE1_OFF_IDS = ['PT-C', 'PT-F', 'PT-G', 'PT-J', 'PT-N', 'PT-Q']; 
-            const STATE2_IDS = ['PT-M', 'PT-N', 'PT-O', 'PT-P', 'PT-Q', 'PT-R'];
+            const STATE1_OFF_IDS = ['PT-D', 'PT-E', 'PT-F', 'PT-J', 'PT-L']; 
+            const STATE2_IDS = ['PT-F', 'PT-H', 'PT-I', 'PT-J', 'PT-K', 'PT-L']; // State 2 is G-L
 
             // 1. Reset ALL PTs 
             components.filter(c => c.type === 'PT').forEach(pt => {
                 pt.active = false;
                 pt.power = 0;
-                // Reset required channel (Retain puzzle requirements for display)
-                if (pt.id.startsWith('PT-A') || pt.id.startsWith('PT-B') || pt.id.startsWith('PT-D') || pt.id.startsWith('PT-E') || pt.id.startsWith('PT-H') || pt.id.startsWith('PT-I') || pt.id.startsWith('PT-K') || pt.id.startsWith('PT-L')) pt.reqChannel = 1;
-                if (pt.id === 'PT-C' || pt.id === 'PT-J' || pt.id === 'PT-M' || pt.id === 'PT-N' || pt.id === 'PT-P' || pt.id === 'PT-Q') pt.reqChannel = 2;
-                if (pt.id === 'PT-F' || pt.id === 'PT-G' || pt.id === 'PT-O') pt.reqChannel = 3;
-                if (pt.id === 'PT-R') pt.reqChannel = 1;
+                // Note: reqChannel and lastPower are persistent and not reset here
             });
            
-            if (state === 'state1') {
+            if (state === 'first') {
+                // NEW: FIRST SETTING (STARTUP) - 10 ON, 2 OFF
                 components.filter(c => c.type === 'PT').forEach(pt => {
-                    const isActive = !STATE1_OFF_IDS.includes(pt.id);
+                    // Set Active Status
+                    if (['PT-G', 'PT-H'].includes(pt.id)) {
+                        pt.active = false;
+                        pt.power = 0;
+                    } else {
+                        pt.active = true;
+                        // Set specific power level from user list
+                        if (pt.id === 'PT-A') pt.power = 1;
+                        if (pt.id === 'PT-B') pt.power = 3;
+                        if (pt.id === 'PT-C') pt.power = 2;
+                        if (pt.id === 'PT-D') pt.power = 4;
+                        if (pt.id === 'PT-E') pt.power = 4;
+                        if (pt.id === 'PT-F') pt.power = 4;
+                        if (pt.id === 'PT-I') pt.power = 4;
+                        if (pt.id === 'PT-J') pt.power = 4;
+                        if (pt.id === 'PT-K') pt.power = 2;
+                        if (pt.id === 'PT-L') pt.power = 2;
+                    }
+                });
+            } else if (state === 'state1') {
+                // SOLVE STATE 1: PT-D, E, F, J, L are OFF (7 PTs ON)
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    const isActive = ['PT-A', 'PT-B', 'PT-C', 'PT-G', 'PT-H', 'PT-I', 'PT-K'].includes(pt.id);
+
                     if (isActive) {
                         pt.active = true;
-                        pt.power = pt.reqPower;
+                        // Synchronize required properties to the final solve state:
+                        if (pt.id === 'PT-A') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 3; pt.power = 4; }
+                        if (pt.id === 'PT-B') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 1; }
+                        if (pt.id === 'PT-C') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 4; pt.power = 3; }
+                        if (pt.id === 'PT-G') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-H') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-I') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 2; }
+                        if (pt.id === 'PT-K') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 2; pt.power = 4; }
+                    } else {
+                        // Inactive PTs: D, E, F, J, L
+                        pt.active = false;
+                        pt.power = 0;
                     }
                 });
             } else if (state === 'state2') {
@@ -1086,7 +1242,25 @@
             createManualControls(); 
             
             // Start on State 1 to ensure a functional initial state
-            applySolveStatePresets('state1'); 
+            applySolveStatePresets('first'); 
+
+            // --- Collapsible Controls Logic ---
+            const toggleBtn = document.getElementById('toggle-collapse-btn');
+            const collapsibleControls = document.getElementById('collapsible-controls');
+            
+            // Start collapsed by default
+            collapsibleControls.classList.add('collapsed');
+            toggleBtn.textContent = 'Show Advanced Details';
+
+            toggleBtn.addEventListener('click', () => {
+                collapsibleControls.classList.toggle('collapsed');
+                if (collapsibleControls.classList.contains('collapsed')) {
+                    toggleBtn.textContent = 'Show Advanced Details';
+                } else {
+                    toggleBtn.textContent = 'Hide Advanced Details';
+                }
+            });
+            // --- End of Collapsible Controls Logic ---
         }
 
         // --- RUN INITIALIZATION ---
