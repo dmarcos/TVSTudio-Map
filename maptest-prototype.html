@@ -375,6 +375,16 @@
                 <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Hide Dev Tools</button>
             </div>
 
+            <div class="control-group" id="legend">
+                <label>Legend:</label>
+                <ul class="legend-list">
+                    <li><span class="legend-dot pt-dot"></span> PT-# = Broadcast Towers</li>
+                    <li><span class="legend-dot rt-dot"></span> RT# = Repeater Towers</li>
+                    <li><span class="legend-dot city-dot"></span> C# = Cities</li>
+                    <li><span class="legend-dot mountain-box"></span> = Mountains</li>
+                </ul>
+            </div>
+
             <div id="collapsible-controls" class="hidden"> 
                 <div class="control-group">
                 <label for="selectedPT">Select PT to Inspect:</label>
@@ -385,14 +395,6 @@
                 <label>Distances from Selected PT:</label>
                 <div id="distances" class="component-list"></div>
             </div>
-                <div class="control-group" id="legend">
-                    <label>Legend:</label>
-                    <ul class="legend-list">
-                        <li><span class="legend-dot pt-dot"></span> PT (Blue/Pink)</li>
-                        <li><span class="legend-dot rt-dot"></span> RT (Yellow)</li>
-                        <li><span class="legend-dot city-dot"></span> City (Red)</li>
-                    </ul>
-                </div>
                 <div class="control-group">
                     <label>Coverage Summary:</label>
                     <div id="coverageDetails" class="component-list"></div>
