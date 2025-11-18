@@ -200,8 +200,13 @@
         .selector-btn.active {
             background-color: #007bff;
             color: white;
-            box-shadow: 0 0 8px #007bff;
-            border-color: #fff;
+            font-weight: 900;        /* Make text extra bold */
+            font-size: 1.1em;        /* Increase font size slightly */
+            border: 2px solid #fff;  /* Thick white border */
+            box-shadow: 0 0 15px cyan; /* Bright cyan glow */
+            transform: scale(1.2);   /* Make the button 20% larger */
+            z-index: 10;             /* Ensure it sits on top of other buttons */
+            position: relative;      /* Required for z-index to work */
         }
         .console-controls {
             display: flex;
@@ -795,7 +800,7 @@
             const angleStep = 0.5; 
             const fullCircle = 2 * Math.PI;
 
-            // --- 1. Draw all DOTTED CONCENTRIC RINGS (P1-P4) ---
+            // --- 1. Draw all DOTTED CONCENTRIC RINGS (P1-P4) for all PTs ---
             components.filter(c => c.type === 'PT').forEach(pt => {
                 const center_x = pt.x * UNIT_PIXELS;
                 const center_y = pt.y * UNIT_PIXELS;
@@ -819,7 +824,7 @@
             });
             // --- END CONCENTRIC RING DRAW ---
 
-        function performRaycasting(component, isPT) {
+            function performRaycasting(component, isPT) {
                 const radius = isPT ? powerRadii[component.power] : RT_FIXED_RADIUS;
                 if (radius <= 0) return;
                 const center_x = component.x * UNIT_PIXELS;
@@ -830,23 +835,20 @@
                 let lastAngleWasClear = false;
                 
                 // --- COLOR DEFINITIONS ---
-                // Default colors (Blue for PT, Yellow for RT)
                 let fill_color = isPT ? 'rgba(0, 191, 255, 0.08)' : 'rgba(255, 255, 0, 0.06)';
                 let border_color = isPT ? 'rgba(0, 191, 255, 0.6)' : 'rgba(255, 255, 0, 0.5)';
                 const blocked_color = isPT ? 'rgba(0, 100, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)';
 
                 // --- HIGHLIGHT OVERRIDE ---
                 if (isPT && component.highlight) {
-                    // Override default colors with pink/magenta
                     fill_color = 'rgba(255, 105, 180, 0.08)'; 
                     border_color = 'rgba(255, 105, 180, 0.6)'; 
                 }
 
-                // Apply dashed line style if PT is highlighted (but only for the solid border draw)
                 if (isPT && component.highlight) {
-                    ctx.setLineDash([5, 3]); // Dashed line pattern
+                    ctx.setLineDash([5, 3]);
                 } else {
-                    ctx.setLineDash([]); // Solid line
+                    ctx.setLineDash([]);
                 }
 
 
@@ -865,7 +867,6 @@
                             startAngle = prevRadians; 
                         }
                         
-                        // Draw the visible border segment (SOLID)
                         ctx.strokeStyle = border_color;
                         ctx.lineWidth = 1.5;
                         
@@ -879,13 +880,11 @@
                         ctx.lineTo(curr_x, curr_y);
                         ctx.stroke();
 
-                    } else { // Signal is BLOCKED
+                    } else { 
                         if (lastAngleWasClear) {
-                            // END of a clear path. Draw the filled wedge up to the boundary.
                             drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, currentRadians);
                         }
                         
-                        // Draw faded segment (for the block)
                         ctx.strokeStyle = blocked_color; 
                         ctx.lineWidth = 0.5;
                         
@@ -903,12 +902,10 @@
                     lastAngleWasClear = isClear;
                 }
 
-                // Handle wrap-around case (if the segment ends at 360 and started before 0)
                 if (lastAngleWasClear) {
                     drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, fullCircle);
                 }
                 
-                // Ensure dashed lines are reset after the component is drawn
                 ctx.setLineDash([]);
             }
             
@@ -922,14 +919,34 @@
                 performRaycasting(rt, false);
             });
             
-            // 4. Draw components points and labels (Unchanged)
+            // 4. Draw components points and labels
+            const currentSelectedID = document.getElementById('selectedPT').value;
+            const console1_ID = console1SelectedPT;
+            const console2_ID = console2SelectedPT;
+
             components.forEach(c => {
                 const center_x = c.x * UNIT_PIXELS;
                 const center_y = c.y * UNIT_PIXELS;
-               
-                let color = 'white';
                 let size = 5;
 
+                // Determine if this component is actively selected by EITHER console
+                const isConsoleSelected = (c.id === console1_ID || c.id === console2_ID);
+
+                // --- NEW: DRAW SELECTION HIGHLIGHT ---
+                if (isConsoleSelected) {
+                    ctx.beginPath();
+                    ctx.arc(center_x, center_y, size + 8, 0, 2 * Math.PI); // Outer ring
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#00FF00'; // Bright Green for Console Selection
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00FF00'; // Green Glow
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; // Reset glow
+                }
+                // -------------------------------------
+
+
+                let color = 'white';
                 if (c.type === 'PT') {
                     color = c.active ? (c.power > 0 ? 'skyblue' : 'darkgray') : 'red';
                     size = 7;
@@ -1438,15 +1455,20 @@ function applySolveStatePresets(state) {
                 const newPtId = target.getAttribute('data-pt');
                 if (consoleNum === 1) console1SelectedPT = newPtId;
                 else console2SelectedPT = newPtId;
-                updateControlPanel(); // Just refresh UI to show new selection
+
+                // --- NEW: Sync with Map Inspection ---
+                // This tells the map logic "This is the tower we are looking at"
+                const selectBox = document.getElementById('selectedPT');
+                if(selectBox) selectBox.value = newPtId;
+                // -------------------------------------
+
+                updateControlPanel(); 
                 return;
             }
 
             // 2. Handle Game Control Buttons (Power, Level, Channel)
-            // We check if the clicked element has the 'game-btn' class
             if (target.classList.contains('game-btn')) {
                 
-                // Switch to custom mode if user interacts
                 if (currentSolveState !== 'custom') {
                     solveStateSelect.value = 'custom';
                     currentSolveState = 'custom';
@@ -1456,7 +1478,6 @@ function applySolveStatePresets(state) {
                 const pt = components.find(c => c.id === ptId);
 
                 if (target.id.includes('toggle')) {
-                    // Toggle Active Status
                     if (pt.active) {
                         pt.lastPower = pt.power;
                         pt.active = false;
@@ -1466,19 +1487,17 @@ function applySolveStatePresets(state) {
                         pt.power = pt.lastPower || pt.reqPower;
                     }
                 } else if (target.id.includes('pwr')) {
-                    // Cycle Power (0 -> 1 -> 2 -> 3 -> 4 -> 0)
-                    if (!pt.active) pt.active = true; // Turn on if clicking power
+                    if (!pt.active) pt.active = true; 
                     let newP = pt.power + 1;
-                    if (newP > 4) newP = 0;
+                    if (newP > 4) newP = 0; // Cycle 0-4 now to allow turning off via power cycle
                     
                     pt.power = newP;
                     if (newP > 0) pt.lastPower = newP;
                     if (newP === 0) pt.active = false;
 
                 } else if (target.id.includes('ch')) {
-                    // Cycle Channel Requirement (1 -> 2 -> 3 -> 1)
                     let newC = pt.reqChannel + 1;
-                    if (newC > 3) newC = 1;
+                    if (newC > 4) newC = 1; // Allow up to 4
                     pt.reqChannel = newC;
                 }
 
