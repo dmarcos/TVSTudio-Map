@@ -15,9 +15,34 @@
             background-color: #222; 
             color: #eee; 
             margin: 0; 
-            padding: 20px; 
+            padding: 200px; 
             gap: 10px; /* Reduced gap for tighter layout */
         }
+        
+        /* --- Main Menu Toggle Styles --- */
+        #main-menu-btn {
+            background-color: #333;
+            color: #aaa;
+            border: 1px solid #555;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            cursor: pointer;
+            width: 100%;
+            padding: 5px;
+            text-align: center;
+        }
+        #main-menu-btn:hover {
+            background-color: #444;
+            border-color: #777;
+        }
+
+        /* Class to hide the sidebar content */
+        #sidebar-content.collapsed {
+            display: none;
+        }
+
         #top-container { 
             display: flex; 
             flex-direction: row; 
@@ -27,21 +52,84 @@
             /* Ensure the overall page structure is centered based on the total block width */
             width: 1344px; /* 1024 (Map) + 300 (Sidebar) + 20 (Gap) */
         }
-        
+   
+
+        /* --- MAP STYLES --- */
+        /* The wrapper holds the stacking context */
+        #map-wrapper {
+            position: relative;
+            width: 1024px;
+            height: 576px;
+            background-color: #222; /* Dark background behind everything */
+        }
+
         /* Canvas dimensions: 16:9 ratio (1024x576) */
         #map-and-controls {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 50px;
             flex-shrink: 0;
+        }
+
+        /* --- Map Overlay Styles --- */
+        #map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Lets you click the PTs through the image */
+            z-index: 1; /* Sits behind the canvas and if it was 10 it would be on top*/
+            
+            /* Map Image Settings */
+            background-image: url('MAPv4-small.jpg'); /* Ensure this matches your file name */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            opacity: 0.5; /* Default starting opacity */
+            image-rendering: -webkit-optimize-contrast; /* Tries to keep text sharp */
+        }
+        /* Map Overlay Inputs */
+        .map-setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        .map-setting-row label {
+            font-size: 0.85em;
+            font-weight: normal;
+            color: #ccc;
+            margin: 0;
+        }
+        .map-input-num {
+            width: 60px;
+            padding: 2px;
+            background: #333;
+            border: 1px solid #666;
+            color: white;
+            font-size: 0.85em;
+            text-align: right;
+        }
+        /* Compact the sliders */
+        input[type=range].map-slider {
+            margin: 0 0 10px 0;
+            height: 5px;
         }
 
         canvas { 
             border: 1px solid #555; 
-            background-color: #333; 
+            /* BG is now transparent so we can see the map behind it */
+            background-color: transparent; 
             width: 1024px; 
             height: 576px; 
+            display: block;
             cursor: grab;
+            /* Vital: Positions canvas ON TOP of the image */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
         }
         canvas.dragging {
             cursor: grabbing;
@@ -303,7 +391,12 @@
 <body>
     <div id="top-container">
         <div id="map-and-controls">
-            <canvas id="networkCanvas" width="1024" height="576"></canvas>
+            
+            <div id="map-wrapper">
+                <canvas id="networkCanvas" width="1024" height="576"></canvas>
+                
+                <div id="map-overlay"></div>
+            </div>
             
             <div id="dev-bar-container" class="hidden">
                 <h4 style="margin: 5px 0; color: #888; text-align: center;">--- Developer / Playtest Controls ---</h4>
@@ -313,7 +406,7 @@
 
             <div id="console-wrapper">
                 <div class="console-box" id="console-1">
-                            <div class="console-header">SECTOR K WEST (1-6)</div>
+                            <div class="console-header">WESTERN TOWER CONTROLS (1-6)</div>
                             <div class="tower-selectors">
                                 <button class="selector-btn active" data-pt="PT-1">1</button>
                                 <button class="selector-btn" data-pt="PT-2">2</button>
@@ -339,7 +432,7 @@
                 </div>
 
                 <div class="console-box" id="console-2">
-                            <div class="console-header">SECTOR W EAST (7-12)</div>
+                            <div class="console-header">EASTERN TOWER CONTROLS (7-12)</div>
                             <div class="tower-selectors">
                                 <button class="selector-btn active" data-pt="PT-7">7</button>
                                 <button class="selector-btn" data-pt="PT-8">8</button>
@@ -367,54 +460,100 @@
         </div>
 
         <div id="controls">
-            <h3>Pylon Puzzle Controls</h3>
-            <div class="control-group">
-                <label for="solveState">Select Solve State:</label>
-                <select id="solveState">
-                    <option value="first">Initial State</option>
-                    <option value="state1">Solve State 1 (D,E,G,J,L Off)</option>
- <!-- took this out -->
- <!-- <option value="state2">Solve State 2 (TBD)</option> -->
-                    <option value="custom">Custom (Manual Control)</option>
-                </select>
-                <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Hide Dev Tools</button>
-            </div>
+            <button id="main-menu-btn">Pylon Puzzle Controls ▼</button>
 
-            <div class="control-group" id="legend">
-                <label>Legend:</label>
-                <ul class="legend-list">
-                    <li><span class="legend-dot pt-dot"></span> PT-# = Broadcast Towers</li>
-                    <li><span class="legend-dot rt-dot"></span> RT# = Repeater Towers</li>
-                    <li><span class="legend-dot city-dot"></span> C# = Cities</li>
-                    <li><span class="legend-dot mountain-box"></span> = Mountains</li>
-                </ul>
-            </div>
+            <div id="sidebar-content">
+                
+                <div class="control-group">
+                    <label for="solveState">Select Solve State:</label>
+                    <select id="solveState">
+                        <option value="first">First Setting (All On)</option>
+                        <option value="state1">Solve State 1</option>
+                        <option value="custom">Custom (Manual Control)</option>
+                    </select>
+                    <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Show Dev Tools</button>
+                </div>
 
-            <div id="collapsible-controls" class="hidden"> 
-                <div class="control-group">
-                <label for="selectedPT">Select PT to Inspect:</label>
-                <select id="selectedPT"></select>
-            </div>
+                <div class="control-group" id="legend">
+                    <label>Legend:</label>
+                    <ul class="legend-list">
+                        <li><span class="legend-dot pt-dot"></span> PT (Blue/Pink)</li>
+                        <li><span class="legend-dot rt-dot"></span> RT (Yellow)</li>
+                        <li><span class="legend-dot city-dot"></span> City (Red)</li>
+                        <li><span class="legend-dot mountain-box"></span> Mountains</li>
+                    </ul>
+                </div>
 
-            <div class="control-group">
-                <label>Distances from Selected PT:</label>
-                <div id="distances" class="component-list"></div>
-            </div>
-                <div class="control-group">
-                    <label>Coverage Summary:</label>
-                    <div id="coverageDetails" class="component-list"></div>
+                <div id="collapsible-controls" class="hidden"> 
+                    <div class="control-group">
+                        <label for="selectedPT">Select PT to Inspect:</label>
+                        <select id="selectedPT"></select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Distances from Selected PT:</label>
+                        <div id="distances" class="component-list"></div>
+                    </div>
+
+                    <div class="control-group">
+                <label>Map Overlay Settings:</label>
+                
+                <div class="map-setting-row">
+                        <label>Opacity:</label>
+                        <input type="number" id="map-opacity-num" class="map-input-num" 
+                               min="0" max="1" step="0.05" value="0.7" 
+                               oninput="syncMapSettings('opacity', this.value)">
+                    </div>
+                    <input type="range" id="map-opacity" class="map-slider" 
+                           min="0" max="1" step="0.05" value="0.7" 
+                           oninput="syncMapSettings('opacity', this.value)">
+
+                    <div class="map-setting-row">
+                        <label>Scale:</label>
+                        <input type="number" id="map-scale-num" class="map-input-num" 
+                               min="0.1" max="3.0" step="0.001" value="1.455" 
+                               oninput="syncMapSettings('scale', this.value)">
+                    </div>
+                    <input type="range" id="map-scale" class="map-slider" 
+                           min="0.5" max="2.0" step="0.001" value="1.455" 
+                           oninput="syncMapSettings('scale', this.value)">
+
+                    <div class="map-setting-row">
+                        <label>X Offset:</label>
+                        <input type="number" id="map-x-num" class="map-input-num" 
+                               step="0.5" value="111.5" 
+                               oninput="syncMapSettings('x', this.value)">
+                    </div>
+                    <input type="range" id="map-x" class="map-slider" 
+                           min="-500" max="500" step="0.5" value="111.5" 
+                           oninput="syncMapSettings('x', this.value)">
+
+                    <div class="map-setting-row">
+                        <label>Y Offset:</label>
+                        <input type="number" id="map-y-num" class="map-input-num" 
+                               step="0.5" value="-73" 
+                               oninput="syncMapSettings('y', this.value)">
+                    </div>
+                    <input type="range" id="map-y" class="map-slider" 
+                           min="-500" max="500" step="0.5" value="-73" 
+                           oninput="syncMapSettings('y', this.value)">
                 </div>
-                <div class="control-group">
-                    <label>Active PT Validation:</label>
-                    <div id="currentPTStates" class="component-list"></div>
+
+                    <div class="control-group">
+                        <label>Coverage Summary:</label>
+                        <div id="coverageDetails" class="component-list"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>Active PT Validation:</label>
+                        <div id="currentPTStates" class="component-list"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>Current Coordinates:</label>
+                        <div id="coordinateOutput" class="component-list"></div>
+                    </div>
                 </div>
-                <div class="control-group">
-                    <label>Current Coordinates:</label>
-                    <div id="coordinateOutput" class="component-list"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+                
+            </div> </div>
 
     <script>
         // --- GLOBAL CONSTANTS & SETUP ---
@@ -434,19 +573,19 @@
 
         const components = [
             // --- PTs 1-12 (Renamed from A-L) ---
-            { id: 'PT-1', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 3 }, 
-            { id: 'PT-2', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 1, highlight: false, reqCities: 1 },
-            { id: 'PT-3', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3, highlight: false, reqCities: 4 }, 
-            { id: 'PT-4', type: 'PT', x: 24.0, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
-            { id: 'PT-5', type: 'PT', x: 24.0, y: 29.5, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 4, highlight: false, reqCities: 1 },
-            { id: 'PT-6', type: 'PT', x: 33.1, y: 20.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 }, 
+            { id: 'PT-1', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 5, lastPower: 4, highlight: false, reqCities: 3 }, 
+            { id: 'PT-2', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 1, highlight: false, reqCities: 1 },
+            { id: 'PT-3', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 4 }, 
+            { id: 'PT-4', type: 'PT', x: 24.0, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-5', type: 'PT', x: 24.0, y: 29.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-6', type: 'PT', x: 33.1, y: 20.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 3, highlight: false, reqCities: 1 }, 
             
-            { id: 'PT-7', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 5 },
-            { id: 'PT-8', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
-            { id: 'PT-9', type: 'PT', x: 56.3, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
-            { id: 'PT-10', type: 'PT', x: 48.5, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
-            { id: 'PT-11', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 2 },
-            { id: 'PT-12', type: 'PT', x: 60.0, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3, highlight: false, reqCities: 1 },
+            { id: 'PT-7', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-8', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-9', type: 'PT', x: 56.3, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-10', type: 'PT', x: 48.5, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-11', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 2 },
+            { id: 'PT-12', type: 'PT', x: 60.0, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 },
 
             // --- REPEATER TOWERS (RTs) - (Total 15 RTs, Renamed A-O) ---
             { id: 'RT-A', type: 'RT', x: 6.8, y: 17.3 },
@@ -743,7 +882,11 @@
        
         // --- RENDERING FUNCTIONS ---
         function drawGrid() {
+            // 1. Clear the screen (REQUIRED)
             ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // 2. Grid Lines (COMMENTED OUT to hide them)
+            /*
             ctx.strokeStyle = '#444';
             ctx.lineWidth = 0.5;
            
@@ -759,6 +902,7 @@
                 ctx.lineTo(canvasWidth, i * UNIT_PIXELS); 
                 ctx.stroke();
             }
+            */
 
             // Draw Mountains (Rectangular)
             ctx.fillStyle = 'rgba(0, 100, 0, 0.5)'; 
@@ -1009,18 +1153,12 @@
         canvas.addEventListener('mousemove', (e) => {
             if (dragTarget) {
                 const mousePos = getMousePos(canvas, e);
-                let newX = mousePos.x - dragOffsetX;
-                let newY = mousePos.y - dragOffsetY;
-
-                // Clamp to grid boundaries
-                newX = Math.max(0.0, Math.min(gridSizeX, newX));
-                newY = Math.max(0.0, Math.min(gridSizeY, newY));
-
-                // Update component position
+                let newX = Math.max(0, Math.min(gridSizeX, mousePos.x - dragOffsetX));
+                let newY = Math.max(0, Math.min(gridSizeY, mousePos.y - dragOffsetY));
                 dragTarget.x = parseFloat(newX.toFixed(1));
                 dragTarget.y = parseFloat(newY.toFixed(1));
                 
-                updateControlPanel();
+                updateCanvasVisuals(); // <--- USE FAST UPDATE HERE
             }
         });
 
@@ -1028,6 +1166,7 @@
             if (dragTarget) {
                 dragTarget = null;
                 canvas.classList.remove('dragging');
+                updateControlPanel(); // <--- USE FULL UPDATE HERE (To refresh coords list)
             }
         });
         
@@ -1239,7 +1378,7 @@
                 }
                 
                 let channelOptions = '';
-                for (let c = 1; c <= 4; c++) {
+                for (let c = 1; c <= 5; c++) {
                     channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
                 }
                 
@@ -1363,15 +1502,22 @@ const controlHTML = `
             });
         }
         
-        function updateControlPanel() {
+        // Fast update: Only redraws the canvas (used during dragging)
+        function updateCanvasVisuals() {
             updateRTStates();
             drawComponents();
+        }
+
+        function updateControlPanel() {
+            updateCanvasVisuals(); // Draw the map first
+            
+            // Then do the heavy text calculations
             updateAllDistances();
             updateCoverageDetails();
             updateCurrentPTStates();
             updateCoordinateOutput();
+            updateConsoles();
             updateManualControls(); // Updates the Dev Bar
-            updateConsoles(); // NEW: Updates the Game Consoles 
         }
         
 function applySolveStatePresets(state) {
@@ -1418,13 +1564,13 @@ function applySolveStatePresets(state) {
                     if (isActive) {
                         pt.active = true;
                         // Synchronize required properties to the final solve state:
-                        if (pt.id === 'PT-1') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 3; pt.power = 4; }
-                        if (pt.id === 'PT-2') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 1; }
-                        if (pt.id === 'PT-3') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 4; pt.power = 3; }
-                        if (pt.id === 'PT-7') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 5; pt.power = 4; }
-                        if (pt.id === 'PT-8') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
-                        if (pt.id === 'PT-9') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 2; }
-                        if (pt.id === 'PT-11') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 2; pt.power = 4; }
+                        if (pt.id === 'PT-1') { pt.reqPower = 4; pt.reqChannel = 5; pt.reqCities = 3; pt.power = 4; }
+                        if (pt.id === 'PT-2') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 1; pt.power = 1; }
+                        if (pt.id === 'PT-3') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 4; pt.power = 3; }
+                        if (pt.id === 'PT-7') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-8') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-9') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 1; pt.power = 2; }
+                        if (pt.id === 'PT-11') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 2; pt.power = 4; }
                     } else {
                         // Inactive PTs: 4, 5, 6, 10, 12
                         pt.active = false;
@@ -1497,7 +1643,10 @@ function applySolveStatePresets(state) {
 
                 } else if (target.id.includes('ch')) {
                     let newC = pt.reqChannel + 1;
-                    if (newC > 4) newC = 1; // Allow up to 4
+                    // Cycle 2 -> 3 -> 4 -> 5 -> 2
+                    if (newC > 5) newC = 2; 
+                    // Safety catch: If currently 0 or 1, jump to 2
+                    if (newC < 2) newC = 2;
                     pt.reqChannel = newC;
                 }
 
@@ -1536,13 +1685,13 @@ function applySolveStatePresets(state) {
 
                 // 3. Update Power Level Button
                 const btnPwr = document.getElementById(`${base}-pwr`);
-                const pwrColors = ['#6c757d', '#ffc107', '#fd7e14', '#007bff', '#dc3545']; // Grey, Yellow, Orange, Blue, Red
+                const pwrColors = ['#6c757d', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1']; // Grey - 6c757d, Yellow - ffc107, Orange - fd7e14, Red - dc3545, Purple - 6f42c1
                 btnPwr.textContent = `P${pt.power}`;
                 btnPwr.style.backgroundColor = pwrColors[pt.power];
                 
                 // 4. Update Channel Button
                 const btnCh = document.getElementById(`${base}-ch`);
-                const chColors = ['#6c757d', '#28a745', '#17a2b8', '#ffc107']; // Grey, Green, Cyan, Yellow
+                const chColors = ['#6c757d', '#28a745', '#17a2b8', '#007bff', '#6f42c1', '#ff69b4']; // Grey - 6c757d, Green (spaceholder) - 28a745, Cyan - 17a2b8, Blue - 007bff, Violet -  6f42c1, Pink - ff69b4, Green - 28a745,
                 btnCh.textContent = `C${pt.reqChannel}`;
                 btnCh.style.backgroundColor = chColors[pt.reqChannel];
             };
@@ -1550,6 +1699,32 @@ function applySolveStatePresets(state) {
             // Run for both consoles
             updateOne(1, console1SelectedPT);
             updateOne(2, console2SelectedPT);
+        }
+
+        // --- MAP OVERLAY CALIBRATION (Synchronized) ---
+        function syncMapSettings(type, value) {
+            // 1. Update both inputs (Slider and Number Box)
+            const slider = document.getElementById(`map-${type}`);
+            const number = document.getElementById(`map-${type}-num`);
+            
+            if (slider) slider.value = value;
+            if (number) number.value = value;
+
+            // 2. Apply to the Overlay
+            updateMapVisuals();
+        }
+
+        function updateMapVisuals() {
+            const overlay = document.getElementById('map-overlay');
+            if (!overlay) return;
+
+            const opacity = document.getElementById('map-opacity').value;
+            const scale = document.getElementById('map-scale').value;
+            const x = document.getElementById('map-x').value;
+            const y = document.getElementById('map-y').value;
+
+            overlay.style.opacity = opacity;
+            overlay.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
         }
 
  function initialize() {
@@ -1564,6 +1739,20 @@ function applySolveStatePresets(state) {
             selectedPTSelect.addEventListener('change', updateControlPanel);
             solveStateSelect.addEventListener('change', (event) => {
                 applySolveStatePresets(event.target.value);
+            });
+
+            // --- NEW: Main Menu Toggle Logic ---
+            const mainMenuBtn = document.getElementById('main-menu-btn');
+            const sidebarContent = document.getElementById('sidebar-content');
+
+            mainMenuBtn.addEventListener('click', () => {
+                sidebarContent.classList.toggle('collapsed');
+                // Optional: Change arrow direction
+                if (sidebarContent.classList.contains('collapsed')) {
+                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▶";
+                } else {
+                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▼";
+                }
             });
 
             // --- NEW: Dev Tool Toggle Logic ---
@@ -1592,6 +1781,9 @@ function applySolveStatePresets(state) {
             
             // Start on State 1
             applySolveStatePresets('first'); 
+
+            // Force the map to update immediately using the values you set in the HTML
+            updateMapVisuals();
         }
 
         // --- RUN INITIALIZATION ---
