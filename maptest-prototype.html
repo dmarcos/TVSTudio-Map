@@ -13,8 +13,8 @@
             height: 8px;
             background-color: #222;
             border: 1px solid #555;
-            margin-top: 4px;
-            margin-bottom: 8px; /* Space before the Status text */
+            margin-top: 2px;
+            margin-bottom: 2px; /* Space before the Status text */
             border-radius: 2px;
             overflow: hidden;
         }
@@ -51,7 +51,7 @@
         
         .warning-text {
             color: #ffcc00;
-            font-size: 1.1em;
+            font-size: 1.0em;
         }
 
         /* --- FLOATING OVERLAY STYLES --- */
@@ -60,22 +60,22 @@
             /* Adjust TOP to align 150px below your button */
             top: 400px; 
             /* Adjust LEFT to place it over the map */
-            left: 1170px; 
+            left: 1165px; 
 
             /* SIZE CONTROL: Set your exact box dimensions here */
-            width: 160px;   /* <--- CHANGE THIS to widen/narrow */
-            height: 190px;  /* <--- CHANGE THIS to make taller/shorter */
+            width: 180px;   /* <--- CHANGE THIS to widen/narrow */
+            height: 215px;  /* <--- CHANGE THIS to make taller/shorter */
             
             /* Visual Styles */
             font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
             color: #00ff00; /* Bright Green text */
-            font-size: 0.85em;
+            font-size: 0.8em;
             font-weight: bold;
             text-shadow: 0 0 5px rgba(0, 255, 0, 0.8); /* Glowing text effect */
             background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black box */
-            padding: 5px;
+            padding: 2px;
             border: 1px solid #00ff00;
-            border-radius: 5px;
+            border-radius: 2px;
             box-sizing: border-box; /* Keeps padding inside the width */
             
             /* Critical: Ensures it sits on top of map/controls */
@@ -83,27 +83,6 @@
             
             /* Critical: Allows you to click "through" the text to the map below */
             pointer-events: none; 
-        }
-        .text-box-fixed {
-            /* 1. Define the Size */
-            width: 120px;   /* Fixed width */
-            height: 100px;  /* Fixed height */
-            
-            /* 2. Handle Overflow (What happens if text is too long?) */
-            overflow-y: auto; /* Adds a vertical scrollbar ONLY if needed */
-            overflow-x: hidden; /* Hides horizontal scrolling */
-            
-            /* 3. Visual Styling */
-            background-color: #333; /* Dark background */
-            color: #eee;            /* Light text */
-            border: 1px solid #555; /* Border */
-            padding: 5px;          /* Space inside the box so text doesn't touch edges */
-            box-sizing: border-box; /* Crucial: Ensures padding doesn't make the box bigger than 300px */
-            
-            /* 4. Text Alignment */
-            text-align: left;
-            font-size: 0.8em;
-            line-height: 1.4; /* Makes text easier to read */
         }
 
         /* General layout and centering */
@@ -183,7 +162,7 @@
             z-index: 1; /* Sits behind the canvas and if it was 10 it would be on top*/
             
             /* Map Image Settings */
-            background-image: url('MAPv4-small.jpg'); /* Ensure this matches your file name */
+            background-image: url('MAPv4-small-2.jpg'); /* Ensure this matches your file name */
             background-repeat: no-repeat;
             background-position: center;
             background-size: cover;
@@ -945,7 +924,7 @@
 
             let allReqsMet = true;
             const details = activePTs.map(pt => {
-                const liveChannel = getPT_RT_HitCount(pt);
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
                 const channelMet = (liveChannel === pt.reqChannel);
                 const cityCoverageMet = doesPtCoverAnyCity(pt, allActiveRTs);
 
@@ -1340,7 +1319,7 @@
             const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
 
             components.filter(c => c.type === 'PT').forEach(pt => {
-                const liveCh = getPT_RT_HitCount(pt);
+                const liveCh = getPT_RT_HitCount(pt) + 1;
                 const liveCity = getPTCityHitCount(pt, activeRTs); 
                 const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
                 const activeStatus = pt.active ? 'ON' : 'OFF'; // NEW: Capture active status
@@ -1471,7 +1450,7 @@
             const allPTs = components.filter(c => c.type === 'PT');
 
             allPTs.forEach(pt => {
-                const liveChannel = getPT_RT_HitCount(pt);
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
                 // FIX: Use the individual PT hit counter for initialization
                 const liveCityCount = getPTCityHitCount(pt); 
 // - to change over the affected boxes so you know which ones are bad signals when designing
@@ -1581,7 +1560,7 @@ const controlHTML = `
          // Updates the UI state of the controls when data changes
         function updateManualControls() {
             components.filter(c => c.type === 'PT').forEach(pt => {
-                const liveChannel = getPT_RT_HitCount(pt);
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
                 // FIX: Call the new individual hit counter
                 const liveCityCount = getPTCityHitCount(pt); 
                 
@@ -1620,15 +1599,23 @@ const controlHTML = `
             if (!msgBox) return;
 
             const activePTs = components.filter(c => c.type === 'PT' && c.active);
+
+            // 1a. Get City Coverage Data
+            const cityData = getCityCoverage();
             
-            // 1. Calculate Total Power
+            // 1b. Calculate Total Power
             const totalPower = activePTs.reduce((sum, pt) => sum + pt.power, 0);
+
+            // 2. Check Channels (Are ALL active PTs hitting their exact required count?)
+            const allChannelsValid = activePTs.every(pt => getPT_RT_HitCount(pt) + 1 === pt.reqChannel);
+            const channelStatusColor = allChannelsValid ? '#00ff00' : '#ff3333';
+            const channelStatusText = allChannelsValid ? 'TRUE' : 'FALSE';
             
-            // 2. Check for "Bad" Towers
+            // 3. Check for "Bad" Towers
             const badTowerIds = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
             const activeBadTowers = activePTs.filter(pt => badTowerIds.includes(pt.id));
             
-            // 3. METER CALCULATION
+            // 4. METER CALCULATION
             // Logic: 0-22 fills first 75%. >22 fills the rest.
             let meterWidth = 0;
             let meterClass = '';
@@ -1645,8 +1632,17 @@ const controlHTML = `
                 meterClass = 'overload'; // Bright Orange
             }
 
-            // 4. Build the HTML
+            // 5. Build the HTML
             let htmlContent = `ACTIVE TOWERS: ${activePTs.length}<br>`;
+
+            // NEW: City Coverage Color Logic
+            const citiesCovered = cityData.coveredCities.length;
+            const totalCities = cityData.totalCities;
+            const cityColor = (citiesCovered === totalCities) ? '#00ff00' : '#ff3333'; // Green if full, Red if missing
+            
+            htmlContent += `CITIES COVERED: <span style="color: ${cityColor}; font-weight: bold;">${citiesCovered}/${totalCities}</span><br>`;
+
+            htmlContent += `CHANNELS SET: <span style="color: ${channelStatusColor}; font-weight: bold;">${channelStatusText}</span><br>`;
             
             if (activeBadTowers.length > 0) {
                 htmlContent += `<span class="warning-text">⚠ RESTRICTED TOWERS: ${activeBadTowers.length}</span><br>`;
@@ -1661,7 +1657,7 @@ const controlHTML = `
                 </div>
             `;
 
-            // 5. Determine System Status (Text)
+            // 6. Determine System Status (Text)
             if (totalPower > 22) {
                 htmlContent += `<span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
                 msgBox.style.borderColor = '#ff3333';
@@ -1696,7 +1692,7 @@ const controlHTML = `
             updateFloatingMessage();
         }
         
-function applySolveStatePresets(state) {
+        function applySolveStatePresets(state) {
             currentSolveState = state;
 
             // NEW: Updated to new PT-1, PT-2, etc. IDs
@@ -1745,7 +1741,7 @@ function applySolveStatePresets(state) {
                         if (pt.id === 'PT-3') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 4; pt.power = 3; }
                         if (pt.id === 'PT-7') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
                         if (pt.id === 'PT-8') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 5; pt.power = 4; }
-                        if (pt.id === 'PT-9') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 1; pt.power = 2; }
+                        if (pt.id === 'PT-9') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 1; pt.power = 2; }
                         if (pt.id === 'PT-11') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 2; pt.power = 4; }
                     } else {
                         // Inactive PTs: 4, 5, 6, 10, 12
