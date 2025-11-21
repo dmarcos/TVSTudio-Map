@@ -7,24 +7,52 @@
     <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
     <style>
         
+        /* --- New Status Styles --- */
+        @keyframes flash-red {
+            0% { opacity: 1; text-shadow: 0 0 5px red; }
+            50% { opacity: 0.5; text-shadow: none; }
+            100% { opacity: 1; text-shadow: 0 0 5px red; }
+        }
+        
+        .status-danger {
+            color: #ff3333 !important;
+            border-color: #ff3333 !important;
+            animation: flash-red 1s infinite;
+        }
+        
+        .status-nominal {
+            color: #00ff00 !important;
+            border-color: #00ff00 !important;
+        }
+        
+        .warning-text {
+            color: #ffcc00;
+            font-size: 1.1em;
+        }
+
         /* --- FLOATING OVERLAY STYLES --- */
         #floating-message {
             position: absolute;
             /* Adjust TOP to align 150px below your button */
-            top: 420px; 
+            top: 400px; 
             /* Adjust LEFT to place it over the map */
-            left: 1190px; 
+            left: 1170px; 
+
+            /* SIZE CONTROL: Set your exact box dimensions here */
+            width: 160px;   /* <--- CHANGE THIS to widen/narrow */
+            height: 190px;  /* <--- CHANGE THIS to make taller/shorter */
             
             /* Visual Styles */
             font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
             color: #00ff00; /* Bright Green text */
-            font-size: 0.7em;
+            font-size: 0.8em;
             font-weight: bold;
             text-shadow: 0 0 5px rgba(0, 255, 0, 0.8); /* Glowing text effect */
             background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black box */
             padding: 5px;
             border: 1px solid #00ff00;
             border-radius: 5px;
+            box-sizing: border-box; /* Keeps padding inside the width */
             
             /* Critical: Ensures it sits on top of map/controls */
             z-index: 9999; 
@@ -34,8 +62,8 @@
         }
         .text-box-fixed {
             /* 1. Define the Size */
-            width: 300px;   /* Fixed width */
-            height: 150px;  /* Fixed height */
+            width: 120px;   /* Fixed width */
+            height: 100px;  /* Fixed height */
             
             /* 2. Handle Overflow (What happens if text is too long?) */
             overflow-y: auto; /* Adds a vertical scrollbar ONLY if needed */
@@ -605,7 +633,7 @@
             </div> </div>
 
             <div id="floating-message">
-                STATUS: SYSTEM OPTIMAL<br>
+                STATUS: <br> SYSTEM OPTIMAL<br>
                 <span id="dynamic-data">SIGNAL: 100%</span>
             </div>
 
@@ -1562,6 +1590,50 @@ const controlHTML = `
             drawComponents();
         }
 
+        // --- FLOATING MESSAGE LOGIC ---
+        function updateFloatingMessage() {
+            const msgBox = document.getElementById('floating-message');
+            if (!msgBox) return;
+
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+            
+            // 1. Calculate Total Power
+            const totalPower = activePTs.reduce((sum, pt) => sum + pt.power, 0);
+            
+            // 2. Check for "Bad" Towers (4, 5, 6, 10, 12)
+            const badTowerIds = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
+            const activeBadTowers = activePTs.filter(pt => badTowerIds.includes(pt.id));
+            
+            // 3. Build the HTML
+            let htmlContent = `ACTIVE TOWERS: ${activePTs.length}<br>`;
+            
+            // Show simple COUNT if bad towers are active
+            if (activeBadTowers.length > 0) {
+                htmlContent += `<span class="warning-text">⚠ RESTRICTED TOWERS: ${activeBadTowers.length}</span><br>`;
+            }
+/*
+            // Show warning if bad towers are active
+            if (activeBadTowers.length > 0) {
+                const badNums = activeBadTowers.map(t => t.id.split('-')[1]).join(', ');
+                htmlContent += `<span class="warning-text">⚠ RESTRICTED: ${badNums}</span><br>`;
+            }
+*/
+            htmlContent += `TOTAL POWER: ${totalPower}<br>`;
+
+            // 4. Determine System Status
+            if (totalPower > 22) {
+                htmlContent += `<br><span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
+                msgBox.style.borderColor = '#ff3333';
+                msgBox.style.color = '#ff3333';
+            } else {
+                htmlContent += `<br><span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
+                msgBox.style.borderColor = '#00ff00';
+                msgBox.style.color = '#00ff00';
+            }
+
+            msgBox.innerHTML = htmlContent;
+        }
+
         function updateControlPanel() {
             updateCanvasVisuals(); // Draw the map first
             
@@ -1573,7 +1645,7 @@ const controlHTML = `
             updateConsoles();
             updateManualControls(); // Updates the Dev Bar
 
-            document.getElementById('dynamic-data').textContent = "ACTIVE TOWERS: " + components.filter(c => c.active).length;
+            updateFloatingMessage();
         }
         
 function applySolveStatePresets(state) {
