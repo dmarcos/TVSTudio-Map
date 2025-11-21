@@ -7,6 +7,59 @@
     <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
     <style>
         
+        /* --- CELEBRATION OVERLAY --- */
+        #celebration-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 20, 0, 0.85);
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+            backdrop-filter: blur(5px); /* Adds a nice blur to the background */
+        }
+        #celebration-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .celebration-text {
+            /* Use LoRes if available, else sans-serif */
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif; 
+            color: #00ff00;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00ff00;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .celebration-sub {
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif;
+            color: #fff;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        #celebration-btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background-color: #28a745;
+            color: white;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px #28a745;
+        }
+        #celebration-btn:hover {
+            background-color: #218838;
+            box-shadow: 0 0 25px #28a745;
+        }
+
         /* --- POWER METER STYLES --- */
         .meter-container {
             width: 100%;
@@ -637,6 +690,12 @@
                 </div>
                  <button id="main-menu-btn" position: absolute; bottom: 0; style="margin-top: auto;">Pylon Puzzle Controls ▼</button>
             </div>
+
+            <div id="celebration-overlay">
+                    <div class="celebration-text">ALL CHANNEL SIGNALS BROADCASTING!</div>
+                    <div class="celebration-sub">Transmission Network Stabilized</div>
+                    <button id="celebration-btn" onclick="document.getElementById('celebration-overlay').classList.remove('active')">CONTINUE</button>
+                </div>
 
             <div id="floating-message">
                 STATUS: <br> SYSTEM OPTIMAL<br>
@@ -1681,6 +1740,35 @@ const controlHTML = `
 */
         }
 
+
+        // --- WIN CONDITION CHECK ---
+        function checkWinCondition() {
+            // 1. Define the Winning State (State 1)
+            // Active: A, B, C, G, H, I, K (Renamed to 1, 2, 3, 7, 8, 9, 11 in your new data)
+            // Note: Ensure these IDs match your current component array
+            const targetActiveIDs = ['PT-1', 'PT-2', 'PT-3', 'PT-7', 'PT-8', 'PT-9', 'PT-11'];
+            
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+            const activeIDs = activePTs.map(c => c.id);
+
+            // 2. Check: Are the correct PTs active? (Must have exactly these 7, no extras)
+            const isCorrectSet = targetActiveIDs.every(id => activeIDs.includes(id)) && 
+                                 activeIDs.length === targetActiveIDs.length;
+
+            if (!isCorrectSet) return; // Wrong towers are on
+
+            // 3. Check: Are all requirements met?
+            const validation = checkAllPuzzleRequirements('custom'); // Use 'custom' to check current state
+            
+            if (validation.isSolved) {
+                const overlay = document.getElementById('celebration-overlay');
+                // Only show if not already active to avoid spamming
+                if (!overlay.classList.contains('active')) {
+                    overlay.classList.add('active');
+                }
+            }
+        }
+
         function updateControlPanel() {
             updateCanvasVisuals(); // Draw the map first
             
@@ -1693,6 +1781,7 @@ const controlHTML = `
             updateManualControls(); // Updates the Dev Bar
 
             updateFloatingMessage();
+            checkWinCondition(); // <--- NEW CHECK
         }
         
         function applySolveStatePresets(state) {
