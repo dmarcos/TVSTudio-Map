@@ -7,6 +7,30 @@
     <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
     <style>
         
+        /* --- POWER METER STYLES --- */
+        .meter-container {
+            width: 100%;
+            height: 8px;
+            background-color: #222;
+            border: 1px solid #555;
+            margin-top: 4px;
+            margin-bottom: 8px; /* Space before the Status text */
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #00ff00; /* Default Green */
+            transition: width 0.3s ease-out, background-color 0.3s;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+        /* Over 22 Style */
+        .meter-fill.overload {
+            background-color: #ffa500; /* Bright Orange */
+            box-shadow: 0 0 8px #ffa500;
+        }
+
         /* --- New Status Styles --- */
         @keyframes flash-red {
             0% { opacity: 1; text-shadow: 0 0 5px red; }
@@ -1600,17 +1624,55 @@ const controlHTML = `
             // 1. Calculate Total Power
             const totalPower = activePTs.reduce((sum, pt) => sum + pt.power, 0);
             
-            // 2. Check for "Bad" Towers (4, 5, 6, 10, 12)
+            // 2. Check for "Bad" Towers
             const badTowerIds = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
             const activeBadTowers = activePTs.filter(pt => badTowerIds.includes(pt.id));
             
-            // 3. Build the HTML
+            // 3. METER CALCULATION
+            // Logic: 0-22 fills first 75%. >22 fills the rest.
+            let meterWidth = 0;
+            let meterClass = '';
+            
+            if (totalPower <= 22) {
+                // Scale 0-22 to 0-75%
+                meterWidth = (totalPower / 22) * 75;
+                meterClass = ''; // Default Green
+            } else {
+                // Scale >22 to 75-100% (capped at 100%)
+                // We'll assume max "reasonable" power is roughly 42 before critical failure
+                meterWidth = 75 + ((totalPower - 22) / 20) * 25;
+                if (meterWidth > 100) meterWidth = 100;
+                meterClass = 'overload'; // Bright Orange
+            }
+
+            // 4. Build the HTML
             let htmlContent = `ACTIVE TOWERS: ${activePTs.length}<br>`;
             
-            // Show simple COUNT if bad towers are active
             if (activeBadTowers.length > 0) {
-                htmlContent += `<span class="warning-text">⚠ RESTRICTED TOWERS: ${activeBadTowers.length}</span><br>`;
+                htmlContent += `<span class="warning-text">⚠ RESTRICTED: ${activeBadTowers.length}</span><br>`;
             }
+
+            htmlContent += `TOTAL POWER: ${totalPower}`;
+            
+            // Inject Meter
+            htmlContent += `
+                <div class="meter-container">
+                    <div class="meter-fill ${meterClass}" style="width: ${meterWidth}%;"></div>
+                </div>
+            `;
+
+            // 5. Determine System Status (Text)
+            if (totalPower > 22) {
+                htmlContent += `<span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
+                msgBox.style.borderColor = '#ff3333';
+                msgBox.style.color = '#ff3333';
+            } else {
+                htmlContent += `<span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
+                msgBox.style.borderColor = '#00ff00';
+                msgBox.style.color = '#00ff00';
+            }
+
+            msgBox.innerHTML = htmlContent;
 /*
             // Show warning if bad towers are active
             if (activeBadTowers.length > 0) {
@@ -1618,20 +1680,6 @@ const controlHTML = `
                 htmlContent += `<span class="warning-text">⚠ RESTRICTED: ${badNums}</span><br>`;
             }
 */
-            htmlContent += `TOTAL POWER: ${totalPower}<br>`;
-
-            // 4. Determine System Status
-            if (totalPower > 22) {
-                htmlContent += `<br><span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
-                msgBox.style.borderColor = '#ff3333';
-                msgBox.style.color = '#ff3333';
-            } else {
-                htmlContent += `<br><span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
-                msgBox.style.borderColor = '#00ff00';
-                msgBox.style.color = '#00ff00';
-            }
-
-            msgBox.innerHTML = htmlContent;
         }
 
         function updateControlPanel() {
