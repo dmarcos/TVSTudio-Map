@@ -1,10 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link href = "font/LoRes/stylesheet.css" rel = "stylesheet" type = "text/css" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
     <style>
+        
+        /* --- FLOATING OVERLAY STYLES --- */
+        #floating-message {
+            position: absolute;
+            /* Adjust TOP to align 150px below your button */
+            top: 420px; 
+            /* Adjust LEFT to place it over the map */
+            left: 1190px; 
+            
+            /* Visual Styles */
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
+            color: #00ff00; /* Bright Green text */
+            font-size: 0.7em;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8); /* Glowing text effect */
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black box */
+            padding: 5px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            
+            /* Critical: Ensures it sits on top of map/controls */
+            z-index: 9999; 
+            
+            /* Critical: Allows you to click "through" the text to the map below */
+            pointer-events: none; 
+        }
+        .text-box-fixed {
+            /* 1. Define the Size */
+            width: 300px;   /* Fixed width */
+            height: 150px;  /* Fixed height */
+            
+            /* 2. Handle Overflow (What happens if text is too long?) */
+            overflow-y: auto; /* Adds a vertical scrollbar ONLY if needed */
+            overflow-x: hidden; /* Hides horizontal scrolling */
+            
+            /* 3. Visual Styling */
+            background-color: #333; /* Dark background */
+            color: #eee;            /* Light text */
+            border: 1px solid #555; /* Border */
+            padding: 5px;          /* Space inside the box so text doesn't touch edges */
+            box-sizing: border-box; /* Crucial: Ensures padding doesn't make the box bigger than 300px */
+            
+            /* 4. Text Alignment */
+            text-align: left;
+            font-size: 0.8em;
+            line-height: 1.4; /* Makes text easier to read */
+        }
+
         /* General layout and centering */
         body { 
             font-family: sans-serif; 
@@ -554,6 +603,11 @@
                 </div>
                 
             </div> </div>
+
+            <div id="floating-message">
+                STATUS: SYSTEM OPTIMAL<br>
+                <span id="dynamic-data">SIGNAL: 100%</span>
+            </div>
 
     <script>
         // --- GLOBAL CONSTANTS & SETUP ---
@@ -1518,6 +1572,8 @@ const controlHTML = `
             updateCoordinateOutput();
             updateConsoles();
             updateManualControls(); // Updates the Dev Bar
+
+            document.getElementById('dynamic-data').textContent = "ACTIVE TOWERS: " + components.filter(c => c.active).length;
         }
         
 function applySolveStatePresets(state) {
