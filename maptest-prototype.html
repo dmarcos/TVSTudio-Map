@@ -112,6 +112,7 @@
             width: 100%;
             padding: 5px;
             text-align: center;
+            margin-top: 15px; /* Push away from content above */
         }
         #main-menu-btn:hover {
             background-color: #444;
@@ -223,6 +224,8 @@
             margin-top: 0; 
             box-sizing: border-box;
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
         }
         .control-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #555; }
         .control-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
@@ -540,8 +543,7 @@
         </div>
 
         <div id="controls">
-            <button id="main-menu-btn">Pylon Puzzle Controls ▼</button>
-
+           
             <div id="sidebar-content">
                 
                 <div class="control-group">
@@ -576,48 +578,48 @@
                     </div>
 
                     <div class="control-group">
-                <label>Map Overlay Settings:</label>
-                
-                <div class="map-setting-row">
-                        <label>Opacity:</label>
-                        <input type="number" id="map-opacity-num" class="map-input-num" 
+                        <label>Map Overlay Settings:</label>
+                        
+                        <div class="map-setting-row">
+                            <label>Opacity:</label>
+                            <input type="number" id="map-opacity-num" class="map-input-num" 
+                                   min="0" max="1" step="0.05" value="0.7" 
+                                   oninput="syncMapSettings('opacity', this.value)">
+                        </div>
+                        <input type="range" id="map-opacity" class="map-slider" 
                                min="0" max="1" step="0.05" value="0.7" 
                                oninput="syncMapSettings('opacity', this.value)">
-                    </div>
-                    <input type="range" id="map-opacity" class="map-slider" 
-                           min="0" max="1" step="0.05" value="0.7" 
-                           oninput="syncMapSettings('opacity', this.value)">
 
-                    <div class="map-setting-row">
-                        <label>Scale:</label>
-                        <input type="number" id="map-scale-num" class="map-input-num" 
-                               min="0.1" max="3.0" step="0.001" value="1.455" 
+                        <div class="map-setting-row">
+                            <label>Scale:</label>
+                            <input type="number" id="map-scale-num" class="map-input-num" 
+                                   min="0.1" max="3.0" step="0.001" value="1.455" 
+                                   oninput="syncMapSettings('scale', this.value)">
+                        </div>
+                        <input type="range" id="map-scale" class="map-slider" 
+                               min="0.5" max="2.0" step="0.001" value="1.455" 
                                oninput="syncMapSettings('scale', this.value)">
-                    </div>
-                    <input type="range" id="map-scale" class="map-slider" 
-                           min="0.5" max="2.0" step="0.001" value="1.455" 
-                           oninput="syncMapSettings('scale', this.value)">
 
-                    <div class="map-setting-row">
-                        <label>X Offset:</label>
-                        <input type="number" id="map-x-num" class="map-input-num" 
-                               step="0.5" value="111.5" 
+                        <div class="map-setting-row">
+                            <label>X Offset:</label>
+                            <input type="number" id="map-x-num" class="map-input-num" 
+                                   step="0.5" value="111.5" 
+                                   oninput="syncMapSettings('x', this.value)">
+                        </div>
+                        <input type="range" id="map-x" class="map-slider" 
+                               min="-500" max="500" step="0.5" value="111.5" 
                                oninput="syncMapSettings('x', this.value)">
-                    </div>
-                    <input type="range" id="map-x" class="map-slider" 
-                           min="-500" max="500" step="0.5" value="111.5" 
-                           oninput="syncMapSettings('x', this.value)">
 
-                    <div class="map-setting-row">
-                        <label>Y Offset:</label>
-                        <input type="number" id="map-y-num" class="map-input-num" 
-                               step="0.5" value="-73" 
+                        <div class="map-setting-row">
+                            <label>Y Offset:</label>
+                            <input type="number" id="map-y-num" class="map-input-num" 
+                                   step="0.5" value="-73" 
+                                   oninput="syncMapSettings('y', this.value)">
+                        </div>
+                        <input type="range" id="map-y" class="map-slider" 
+                               min="-500" max="500" step="0.5" value="-73" 
                                oninput="syncMapSettings('y', this.value)">
                     </div>
-                    <input type="range" id="map-y" class="map-slider" 
-                           min="-500" max="500" step="0.5" value="-73" 
-                           oninput="syncMapSettings('y', this.value)">
-                </div>
 
                     <div class="control-group">
                         <label>Coverage Summary:</label>
@@ -632,8 +634,9 @@
                         <div id="coordinateOutput" class="component-list"></div>
                     </div>
                 </div>
-                
-            </div> </div>
+                </div>
+                 <button id="main-menu-btn" position: absolute; bottom: 0; style="margin-top: auto;">Pylon Puzzle Controls ▼</button>
+            </div>
 
             <div id="floating-message">
                 STATUS: <br> SYSTEM OPTIMAL<br>
@@ -1917,11 +1920,15 @@ const controlHTML = `
             const mainMenuBtn = document.getElementById('main-menu-btn');
             const sidebarContent = document.getElementById('sidebar-content');
 
+            // NEW: Start collapsed by default
+            sidebarContent.classList.add('collapsed');
+            mainMenuBtn.textContent = "Pylon Puzzle Controls ▲";
+
             mainMenuBtn.addEventListener('click', () => {
                 sidebarContent.classList.toggle('collapsed');
                 // Optional: Change arrow direction
                 if (sidebarContent.classList.contains('collapsed')) {
-                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▶";
+                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▲";
                 } else {
                     mainMenuBtn.textContent = "Pylon Puzzle Controls ▼";
                 }
