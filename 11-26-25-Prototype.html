@@ -1,0 +1,2192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href = "font/LoRes/stylesheet.css" rel = "stylesheet" type = "text/css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
+    <style>
+        
+        /* --- INTRO MODAL STYLES --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; 
+            left: 0;
+            width: 100vw; 
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.85); /* Dark semi-transparent background */
+            backdrop-filter: blur(8px); /* THE BLUR EFFECT */
+            z-index: 30000; /* Sits on top of everything */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        
+        .modal-content {
+            background-color: #1a1a1a;
+            border: 2px solid #00ff00; /* Sci-fi Green Border */
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+            padding: 30px;
+            width: 700px;
+            max-width: 90%;
+            max-height: 85vh; /* Prevents it from being taller than the screen */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif; /* Matches your tech theme */
+            color: #eee;
+        }
+
+        .modal-title {
+            color: #00ff00;
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .modal-text-scroll {
+            width: 100%;
+            overflow-y: auto; /* Adds scrollbar if text is too long */
+            margin-bottom: 20px;
+            padding-right: 10px; /* Space for scrollbar */
+            font-family: sans-serif; /* Easier to read for body text */
+            line-height: 1.6;
+            font-size: 1.1em;
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+
+        .modal-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .modal-btn:hover {
+            background-color: #0056b3;
+            box-shadow: 0 0 15px #007bff;
+            transform: scale(1.05);
+        }
+
+        /* Class to hide the modal */
+        .modal-overlay.closed {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* --- CELEBRATION OVERLAY --- */
+        #celebration-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 20, 0, 0.85);
+            z-index: 20000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+            backdrop-filter: blur(5px); /* Adds a nice blur to the background */
+        }
+        #celebration-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .celebration-text {
+            /* Use LoRes if available, else sans-serif */
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif; 
+            color: #00ff00;
+            font-size: 3em;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00ff00;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .celebration-sub {
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif;
+            color: #fff;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        #celebration-btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background-color: #28a745;
+            color: white;
+            border: 2px solid #fff;
+            cursor: pointer;
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px #28a745;
+        }
+        #celebration-btn:hover {
+            background-color: #218838;
+            box-shadow: 0 0 25px #28a745;
+        }
+
+        /* --- POWER METER STYLES --- */
+        .meter-container {
+            width: 100%;
+            height: 8px;
+            background-color: #222;
+            border: 1px solid #555;
+            margin-top: 2px;
+            margin-bottom: 2px; /* Space before the Status text */
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #00ff00; /* Default Green */
+            transition: width 0.3s ease-out, background-color 0.3s;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+        /* Over 22 Style */
+        .meter-fill.overload {
+            background-color: #ffa500; /* Bright Orange */
+            box-shadow: 0 0 8px #ffa500;
+        }
+
+        /* --- New Status Styles --- */
+        @keyframes flash-red {
+            0% { opacity: 1; text-shadow: 0 0 5px red; }
+            50% { opacity: 0.5; text-shadow: none; }
+            100% { opacity: 1; text-shadow: 0 0 5px red; }
+        }
+        
+        .status-danger {
+            color: #ff3333 !important;
+            border-color: #ff3333 !important;
+            animation: flash-red 1s infinite;
+        }
+        
+        .status-nominal {
+            color: #00ff00 !important;
+            border-color: #00ff00 !important;
+        }
+        
+        .warning-text {
+            color: #ffcc00;
+            font-size: 1.0em;
+        }
+
+        /* --- FLOATING OVERLAY STYLES --- */
+        #floating-message {
+            position: absolute;
+            /* Adjust TOP to align 150px below your button */
+            top: 400px; 
+            /* Adjust LEFT to place it over the map */
+            left: 1165px; 
+
+            /* SIZE CONTROL: Set your exact box dimensions here */
+            width: 180px;   /* <--- CHANGE THIS to widen/narrow */
+            height: 215px;  /* <--- CHANGE THIS to make taller/shorter */
+            
+            /* Visual Styles */
+            font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
+            color: #00ff00; /* Bright Green text */
+            font-size: 0.8em;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8); /* Glowing text effect */
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black box */
+            padding: 2px;
+            border: 1px solid #00ff00;
+            border-radius: 2px;
+            box-sizing: border-box; /* Keeps padding inside the width */
+            
+            /* Critical: Ensures it sits on top of map/controls */
+            z-index: 9999; 
+            
+            /* Critical: Allows you to click "through" the text to the map below */
+            pointer-events: none; 
+        }
+
+        /* General layout and centering */
+        body { 
+            font-family: sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh; 
+            background-color: #222; 
+            color: #eee; 
+            margin: 0; 
+            padding: 200px; 
+            gap: 10px; /* Reduced gap for tighter layout */
+        }
+        
+        /* --- Main Menu Toggle Styles --- */
+        #main-menu-btn {
+            background-color: #333;
+            color: #aaa;
+            border: 1px solid #555;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            cursor: pointer;
+            width: 100%;
+            padding: 5px;
+            text-align: center;
+            margin-top: 15px; /* Push away from content above */
+        }
+        #main-menu-btn:hover {
+            background-color: #444;
+            border-color: #777;
+        }
+
+        /* Class to hide the sidebar content */
+        #sidebar-content.collapsed {
+            display: none;
+        }
+
+        #top-container { 
+            display: flex; 
+            flex-direction: row; 
+            gap: 20px; 
+            /* Fix: Use a container aligned with the map's width as the reference */
+            position: relative;
+            /* Ensure the overall page structure is centered based on the total block width */
+            width: 1344px; /* 1024 (Map) + 300 (Sidebar) + 20 (Gap) */
+        }
+   
+
+        /* --- MAP STYLES --- */
+        /* The wrapper holds the stacking context */
+        #map-wrapper {
+            position: relative;
+            width: 1024px;
+            height: 576px;
+            background-color: #222; /* Dark background behind everything */
+        }
+
+        /* Canvas dimensions: 16:9 ratio (1024x576) */
+        #map-and-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            flex-shrink: 0;
+        }
+
+        /* --- Map Overlay Styles --- */
+        #map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Lets you click the PTs through the image */
+            z-index: 1; /* Sits behind the canvas and if it was 10 it would be on top*/
+            
+            /* Map Image Settings */
+            background-image: url('MAPv4-small-2.jpg'); /* Ensure this matches your file name */
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            opacity: 0.5; /* Default starting opacity */
+            image-rendering: -webkit-optimize-contrast; /* Tries to keep text sharp */
+        }
+        /* Map Overlay Inputs */
+        .map-setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        .map-setting-row label {
+            font-size: 0.85em;
+            font-weight: normal;
+            color: #ccc;
+            margin: 0;
+        }
+        .map-input-num {
+            width: 60px;
+            padding: 2px;
+            background: #333;
+            border: 1px solid #666;
+            color: white;
+            font-size: 0.85em;
+            text-align: right;
+        }
+        /* Compact the sliders */
+        input[type=range].map-slider {
+            margin: 0 0 10px 0;
+            height: 5px;
+        }
+
+        canvas { 
+            border: 1px solid #555; 
+            /* BG is now transparent so we can see the map behind it */
+            background-color: transparent; 
+            width: 1024px; 
+            height: 576px; 
+            display: block;
+            cursor: grab;
+            /* Vital: Positions canvas ON TOP of the image */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+        canvas.dragging {
+            cursor: grabbing;
+        }
+        #controls { 
+            background-color: #444; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+            width: 300px; 
+            margin-top: 0; 
+            box-sizing: border-box;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #555; }
+        .control-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="range"], input[type="number"], button {
+            width: calc(100% - 10px); padding: 8px; margin-bottom: 10px; border-radius: 4px;
+            border: 1px solid #666; background-color: #555; color: #eee; appearance: none; 
+        }
+        button { cursor: pointer; background-color: #007bff; border-color: #007bff; }
+        button:hover { background-color: #0056b3; border-color: #0056b3; }
+        h3 { margin-top: 0; color: #fff; }
+        .component-list { max-height: 200px; overflow-y: auto; background-color: #555; padding: 10px; border-radius: 4px; border: 1px solid #666; margin-top: 10px; }
+        .component-list div { padding: 3px 0; font-size: 0.9em; }
+        
+        /* Validation Colors */
+        .pass { color: #0f0; } 
+        .fail { color: lightcoral; } 
+        .solved { font-weight: bold; font-size: 1.2em; color: #0f0; text-align: center; }
+        .not-solved { font-weight: bold; font-size: 1.2em; color: lightcoral; text-align: center; }
+
+        /* --- Legend Styles --- */
+        .legend-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 5px 0 0 0; /* Small top margin */
+        }
+        .legend-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            margin-right: 10px;
+            flex-shrink: 0;
+            border: 1px solid #888;
+        }
+        .pt-dot {
+            background-color: skyblue;
+            border-radius: 50%;
+        }
+        .rt-dot {
+            background-color: yellow;
+            border-radius: 50%;
+        }
+        .city-dot {
+            background-color: lightcoral;
+            border-radius: 50%;
+        }
+        .mountain-box {
+            background-color: rgba(0, 100, 0, 0.5);
+            border: 1px solid darkgreen;
+            border-radius: 0; /* Make it a box */
+            width: 16px; /* Slightly wider */
+        }
+
+        /* Style for the collapsible section */
+        #collapsible-controls.collapsed {
+              display: none;
+        }
+
+        /* --- PT Controls Bar Below Map --- */
+        #pt-control-bar {
+            width: 1024px; 
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 8px;
+            border: 1px solid #555;
+            display: flex; 
+            flex-wrap: wrap;
+            gap: 15px; /* Increased gap for 6 columns */
+            justify-content: flex-start;
+        }
+        .pt-control-box {
+            /* Calculated to fit 6 columns cleanly */
+            flex: 0 0 calc(1024px / 6 - 15px); 
+            max-width: calc(1024px / 6 - 15px);
+            box-sizing: border-box; 
+            background-color: #444;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .pt-control-box h5 {
+            margin: 0;
+            color: skyblue;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        /* --- Helper Class to Hide Dev Tools --- */
+        .hidden {
+            display: none !important;
+        }
+
+        /* --- GAMEPLAY CONSOLES --- */
+        #console-wrapper {
+            width: 1024px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .console-box {
+            width: 48%;
+            background-color: #2a2a2a;
+            border: 4px solid #555;
+            border-radius: 10px;
+            padding: 15px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .console-header {
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        .tower-selectors {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #111;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .selector-btn {
+            width: 16%;
+            padding: 8px 0;
+            background-color: #333;
+            border: 1px solid #555;
+            color: #aaa;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .selector-btn.active {
+            background-color: #007bff;
+            color: white;
+            font-weight: 900;        /* Make text extra bold */
+            font-size: 1.1em;        /* Increase font size slightly */
+            border: 2px solid #fff;  /* Thick white border */
+            box-shadow: 0 0 15px cyan; /* Bright cyan glow */
+            transform: scale(1.2);   /* Make the button 20% larger */
+            z-index: 10;             /* Ensure it sits on top of other buttons */
+            position: relative;      /* Required for z-index to work */
+        }
+        .console-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .console-btn-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .console-btn-group label {
+            font-size: 0.8em;
+            color: #aaa;
+        }
+        .game-btn {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: 3px solid #444;
+            transition: all 0.1s;
+            user-select: none;
+        }
+        .game-btn:active {
+            transform: scale(0.95);
+        }
+        .game-btn.square {
+            border-radius: 8px;
+            background-color: #dc3545; /* Default Off Red */
+            color: white;
+        }
+        .game-btn.square.on {
+            background-color: #28a745; /* On Green */
+            box-shadow: 0 0 15px #28a745;
+            border-color: #fff;
+        }
+        .game-btn.circle {
+            border-radius: 50%;
+            background-color: #666;
+            color: white;
+        }
+
+        /* NEW: Restore dropdown arrow for select elements */
+        select {
+            appearance: auto;
+            -webkit-appearance: auto;
+            -moz-appearance: auto;
+            
+            /* Custom arrow for dark mode */
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23EEEEEE%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right .7em top 50%;
+            background-size: .65em auto;
+
+            /* Adjust padding to make room for the new arrow */
+            padding-right: 2.5em; 
+        }
+
+        /* New Highlight Style */
+       .pt-control-box.highlight {
+           background-color: #9f3679; /* A distinct pink/purple */
+           border-left-color: #ff69b4; /* Pink border */
+        }
+
+        .control-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            font-size: 0.8em;
+        }
+        .control-status-row select, .control-status-row button {
+            width: 45%;
+            margin: 0;
+            padding: 2px;
+            font-size: 0.75em;
+        }
+        .live-ch-status {
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        .control-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="top-container">
+        <div id="map-and-controls">
+            
+            <div id="map-wrapper">
+                <canvas id="networkCanvas" width="1024" height="576"></canvas>
+                
+                <div id="map-overlay"></div>
+            </div>
+            
+            <div id="dev-bar-container" class="hidden">
+                <h4 style="margin: 5px 0; color: #888; text-align: center;">--- Developer / Playtest Controls ---</h4>
+                <div id="pt-control-bar">
+                    </div>
+            </div>
+
+            <div id="console-wrapper">
+                <div class="console-box" id="console-1">
+                            <div class="console-header">WESTERN TOWER CONTROLS (1-6)</div>
+                            <div class="tower-selectors">
+                                <button class="selector-btn active" data-pt="PT-1">1</button>
+                                <button class="selector-btn" data-pt="PT-2">2</button>
+                                <button class="selector-btn" data-pt="PT-3">3</button>
+                                <button class="selector-btn" data-pt="PT-4">4</button>
+                                <button class="selector-btn" data-pt="PT-5">5</button>
+                                <button class="selector-btn" data-pt="PT-6">6</button>
+                            </div>
+                    <div class="console-controls">
+                        <div class="console-btn-group">
+                            <div class="game-btn square" id="c1-toggle">OFF</div>
+                            <label>POWER</label>
+                        </div>
+                        <div class="console-btn-group">
+                            <div class="game-btn circle" id="c1-pwr">P0</div>
+                            <label>LEVEL</label>
+                        </div>
+                        <div class="console-btn-group">
+                            <div class="game-btn circle" id="c1-ch">C1</div>
+                            <label>CHANNEL</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="console-box" id="console-2">
+                            <div class="console-header">EASTERN TOWER CONTROLS (7-12)</div>
+                            <div class="tower-selectors">
+                                <button class="selector-btn active" data-pt="PT-7">7</button>
+                                <button class="selector-btn" data-pt="PT-8">8</button>
+                                <button class="selector-btn" data-pt="PT-9">9</button>
+                                <button class="selector-btn" data-pt="PT-10">10</button>
+                                <button class="selector-btn" data-pt="PT-11">11</button>
+                                <button class="selector-btn" data-pt="PT-12">12</button>
+                            </div>
+                    <div class="console-controls">
+                        <div class="console-btn-group">
+                            <div class="game-btn square" id="c2-toggle">OFF</div>
+                            <label>POWER</label>
+                        </div>
+                        <div class="console-btn-group">
+                            <div class="game-btn circle" id="c2-pwr">P0</div>
+                            <label>LEVEL</label>
+                        </div>
+                        <div class="console-btn-group">
+                            <div class="game-btn circle" id="c2-ch">C1</div>
+                            <label>CHANNEL</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="controls">
+           
+            <div id="sidebar-content">
+                
+                <div class="control-group">
+                    <label for="solveState">Select Solve State:</label>
+                    <select id="solveState">
+                        <option value="first">First Setting (All On)</option>
+                        <option value="state1">Solve State 1</option>
+                        <option value="custom">Custom (Manual Control)</option>
+                    </select>
+                    <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Show Dev Tools</button>
+                </div>
+
+                <div class="control-group" id="legend">
+                    <label>Legend:</label>
+                    <ul class="legend-list">
+                        <li><span class="legend-dot pt-dot"></span> PT (Blue/Pink)</li>
+                        <li><span class="legend-dot rt-dot"></span> RT (Yellow)</li>
+                        <li><span class="legend-dot city-dot"></span> City (Red)</li>
+                        <li><span class="legend-dot mountain-box"></span> Mountains</li>
+                    </ul>
+                </div>
+
+                <div id="collapsible-controls" class="hidden"> 
+                    <div class="control-group">
+                        <label for="selectedPT">Select PT to Inspect:</label>
+                        <select id="selectedPT"></select>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Distances from Selected PT:</label>
+                        <div id="distances" class="component-list"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Map Overlay Settings:</label>
+                        
+                        <div class="map-setting-row">
+                            <label>Opacity:</label>
+                            <input type="number" id="map-opacity-num" class="map-input-num" 
+                                   min="0" max="1" step="0.05" value="0.7" 
+                                   oninput="syncMapSettings('opacity', this.value)">
+                        </div>
+                        <input type="range" id="map-opacity" class="map-slider" 
+                               min="0" max="1" step="0.05" value="0.7" 
+                               oninput="syncMapSettings('opacity', this.value)">
+
+                        <div class="map-setting-row">
+                            <label>Scale:</label>
+                            <input type="number" id="map-scale-num" class="map-input-num" 
+                                   min="0.1" max="3.0" step="0.001" value="1.455" 
+                                   oninput="syncMapSettings('scale', this.value)">
+                        </div>
+                        <input type="range" id="map-scale" class="map-slider" 
+                               min="0.5" max="2.0" step="0.001" value="1.455" 
+                               oninput="syncMapSettings('scale', this.value)">
+
+                        <div class="map-setting-row">
+                            <label>X Offset:</label>
+                            <input type="number" id="map-x-num" class="map-input-num" 
+                                   step="0.5" value="111.5" 
+                                   oninput="syncMapSettings('x', this.value)">
+                        </div>
+                        <input type="range" id="map-x" class="map-slider" 
+                               min="-500" max="500" step="0.5" value="111.5" 
+                               oninput="syncMapSettings('x', this.value)">
+
+                        <div class="map-setting-row">
+                            <label>Y Offset:</label>
+                            <input type="number" id="map-y-num" class="map-input-num" 
+                                   step="0.5" value="-73" 
+                                   oninput="syncMapSettings('y', this.value)">
+                        </div>
+                        <input type="range" id="map-y" class="map-slider" 
+                               min="-500" max="500" step="0.5" value="-73" 
+                               oninput="syncMapSettings('y', this.value)">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Coverage Summary:</label>
+                        <div id="coverageDetails" class="component-list"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>Active PT Validation:</label>
+                        <div id="currentPTStates" class="component-list"></div>
+                    </div>
+                    <div class="control-group">
+                        <label>Current Coordinates:</label>
+                        <div id="coordinateOutput" class="component-list"></div>
+                    </div>
+                </div>
+                </div>
+                 <button id="main-menu-btn" position: absolute; bottom: 0; style="margin-top: auto;">Pylon Puzzle Controls ▼</button>
+            </div>
+
+            <div id="celebration-overlay">
+                    <div class="celebration-text">ALL CHANNEL SIGNALS BROADCASTING!</div>
+                    <div class="celebration-sub">Transmission Network Stabilized</div>
+                    <button id="celebration-btn" onclick="document.getElementById('celebration-overlay').classList.remove('active')">CONTINUE</button>
+                </div>
+
+            <div id="floating-message">
+                STATUS: <br> SYSTEM OPTIMAL<br>
+                <span id="dynamic-data">SIGNAL: 100%</span>
+            </div>
+
+<div id="intro-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h1 class="modal-title">PLAYTEST INFO</h1>
+            
+            <div class="modal-text-scroll">
+                <h2><p><strong>WHAT YOU SEE... (READ THIS FIRST!!!)</strong></p></h2>
+                <p>Welcome, VIP Guests to Studio 73! You are now in the 70's in a TV station's full studio and broadcasting facility. Before you is a large lit up table/technological device with a map on top.</p>
+                <p>Below, attached to the side of the table, are 2 sets of controls with 6 buttons with numbers, 1 power button, and 2 knob switches.</p>
+                <h2><p><strong>INSTRUCTIONS:</strong></p></h2>
+                <ul style="text-align: left; margin-bottom: 15px;">
+                    <li><strong>First</strong> open a close-up of the details of the map here (download and open): <br><center><h2> <a href="https://github.com/Skeckulous/TVSTudio-Map/raw/main/MAPv4-small-2.jpg" target="_blank">Map Details </a> </h2> </center> <i>(So you can read things on the map and on the right. It is a bit too low res to just zoom in via browser.)</i></li><br>
+                    <li>ONLY interact with the buttons and knobs at the bottom (there's other things that are functional but it's for editing and testing).</li>
+                    <li>Talk through what draws your eye and what you think you would do if you were to come across this.</li>
+                    <li>Tell me what you think the story is, what your goal was, and the steps you took to get towards that goal.</li>
+                    <li>Ignore "Pylon Puzzle Controls", as that is for debug and initial playtesting design.</li>
+                </ul>
+                <h3><p><strong>Good luck. </strong></p></h3>
+            </div>
+
+            <button id="start-btn" onclick="closeIntroModal()"><strong>INITIALIZE INTERFACE</strong></button>
+        </div>
+    </div>
+
+<!--
+            <div id="intro-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h1 class="modal-title">SYSTEM ALERT</h1>
+            
+            <div class="modal-text-scroll">
+                <p><strong>INCOMING TRANSMISSION...</strong></p>
+                <p>Welcome, VIP Guests. You have been tasked with stabilizing the Studio 73 Broadcast Network.</p>
+                <p>The region is divided into two active states. Your goal is to configure the Primary Towers (PTs) and Repeater Towers (RTs) to satisfy the signal requirements for BOTH states simultaneously.</p>
+                <p><strong>INSTRUCTIONS:</strong></p>
+                <ul style="text-align: left; margin-bottom: 15px;">
+                    <li>Use the <strong>Consoles</strong> below the map to toggle towers and adjust power.</li>
+                    <li>Check the <strong>Sidebar</strong> for validation status.</li>
+                    <li>Ensure all active towers reach their required City count.</li>
+                </ul>
+                <p>The system is currently in <strong>First Setting</strong> (All Towers Active). Good luck.</p>
+            </div>
+
+            <button id="start-btn" onclick="closeIntroModal()">INITIALIZE INTERFACE</button>
+        </div>
+    </div>
+-->
+
+    <script>
+        // --- GLOBAL CONSTANTS & SETUP ---
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSizeX = 64; 
+        const gridSizeY = 36; 
+        const UNIT_PIXELS = canvas.height / gridSizeY; // 16
+        const canvasWidth = 1024;
+        const canvasHeight = 576; 
+        const RT_FIXED_RADIUS = 4.0; // RTs fixed at 4.0U
+
+        // Radii Mapping: P3 = 5.0U, P4 = 7.0U
+        const powerRadii = { 0: 0.0, 1: 2.0, 2: 4.0, 3: 6.0, 4: 8.5 };
+
+        // === ALL MAP DATA: FINAL PT, 24 RT, and 16 CITY PLACEMENT ===
+
+        const components = [
+            // --- PTs 1-12 (Renamed from A-L) ---
+            { id: 'PT-1', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 5, lastPower: 4, highlight: false, reqCities: 3 }, 
+            { id: 'PT-2', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 1, highlight: false, reqCities: 1 },
+            { id: 'PT-3', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 4 }, 
+            { id: 'PT-4', type: 'PT', x: 24.0, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-5', type: 'PT', x: 24.0, y: 29.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-6', type: 'PT', x: 33.1, y: 20.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 3, highlight: false, reqCities: 1 }, 
+            
+            { id: 'PT-7', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-8', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-9', type: 'PT', x: 56.3, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-10', type: 'PT', x: 48.5, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-11', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 2 },
+            { id: 'PT-12', type: 'PT', x: 60.0, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 },
+
+            // --- REPEATER TOWERS (RTs) - (Total 15 RTs, Renamed A-O) ---
+            { id: 'RT-A', type: 'RT', x: 6.8, y: 17.3 },
+            { id: 'RT-B', type: 'RT', x: 8.6, y: 29.1 },
+            { id: 'RT-C', type: 'RT', x: 16.0, y: 4.1 },
+            { id: 'RT-D', type: 'RT', x: 5.9, y: 3.8 },
+            { id: 'RT-E', type: 'RT', x: 22.0, y: 12.9 },
+            { id: 'RT-F', type: 'RT', x: 24.4, y: 21.1 },
+            { id: 'RT-G', type: 'RT', x: 31.8, y: 6.5 },
+            { id: 'RT-H', type: 'RT', x: 37.1, y: 21.1 },
+            { id: 'RT-I', type: 'RT', x: 32.3, y: 29.9 },
+            { id: 'RT-J', type: 'RT', x: 47.0, y: 25.5 },
+            { id: 'RT-K', type: 'RT', x: 58.3, y: 31.2 },
+            { id: 'RT-L', type: 'RT', x: 59.1, y: 13.6 },
+            { id: 'RT-M', type: 'RT', x: 47.0, y: 3.4 },
+            { id: 'RT-N', type: 'RT', x: 3.0, y: 10.9 },
+            { id: 'RT-O', type: 'RT', x: 58.1, y: 3.5 },
+
+            // --- CITIES (C) - (Total 18 Cities, Unchanged) ---
+            { id: 'C1', type: 'C', x: 5.3, y: 20.2 },
+            { id: 'C2', type: 'C', x: 6.8, y: 32.0 },
+            { id: 'C3', type: 'C', x: 16.9, y: 22.2 },
+            { id: 'C4', type: 'C', x: 3.7, y: 1.6 },
+            { id: 'C5', type: 'C', x: 16.3, y: 0.7 },
+            { id: 'C6', type: 'C', x: 21.2, y: 10.0 },
+            { id: 'C7', type: 'C', x: 27.5, y: 19.7 },
+            { id: 'C8', type: 'C', x: 23.4, y: 24.5 },
+            { id: 'C9', type: 'C', x: 28.9, y: 4.2 },
+            { id: 'C10', type: 'C', x: 36.1, y: 17.6 },
+            { id: 'C11', type: 'C', x: 44.1, y: 16.7 },
+            { id: 'C12', type: 'C', x: 44.5, y: 10.7 },
+            { id: 'C13', type: 'C', x: 38.8, y: 24.4 },
+            { id: 'C14', type: 'C', x: 29.8, y: 27.3 },
+            { id: 'C15', type: 'C', x: 48.3, y: 23.4 },
+            { id: 'C16', type: 'C', x: 47.5, y: 29.4 },
+            { id: 'C17', type: 'C', x: 59.8, y: 34.2 },
+            { id: 'C18', type: 'C', x: 61.7, y: 11.5 }
+        ];
+
+        // === MOUNTAIN DATA (6 Smaller Rectangles, Unchanged) ===
+        const mountains = [
+            { id: 'M1', x: 10, y: 14, w: 4, h: 3 }, 
+            { id: 'M2', x: 14, y: 25, w: 4, h: 3 }, 
+            { id: 'M3', x: 28, y: 8, w: 4, h: 3 },  
+            { id: 'M4', x: 32, y: 25, w: 4, h: 3 }, 
+            { id: 'M5', x: 50, y: 14, w: 4, h: 3 },
+            { id: 'M6', x: 50, y: 19, w: 4, h: 3 }  
+        ];
+
+        // --- Global State & UI Elements ---
+        let rtStates = {}; 
+        let currentSolveState = 'custom';
+        const selectedPTSelect = document.getElementById('selectedPT');
+        const solveStateSelect = document.getElementById('solveState');
+        const bottomPtControlsDiv = document.getElementById('pt-control-bar'); 
+        const distancesDiv = document.getElementById('distances');
+        const coverageDetailsDiv = document.getElementById('coverageDetails');
+        const currentPTStatesDiv = document.getElementById('currentPTStates');
+        const coordinateOutputDiv = document.getElementById('coordinateOutput');
+
+        let dragTarget = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // --- Console State ---
+        let console1SelectedPT = 'PT-1'; // Default for Console 1
+        let console2SelectedPT = 'PT-7'; // Default for Console 2
+
+        // --- CORE HANDLER FUNCTIONS (MUST BE DEFINED EARLY) ---
+
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.id.split('-')[2];
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
+
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    }
+                }
+                updateControlPanel();
+            }
+        }
+
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+        
+        // --- MODAL CONTROL ---
+        function closeIntroModal() {
+            const modal = document.getElementById('intro-modal');
+            modal.classList.add('closed');
+        }
+
+        // Toggles active status
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                pt.active = !pt.active;
+                
+                if (pt.active && pt.power === 0) {
+                    pt.power = 3; 
+                }
+                if (!pt.active) {
+                    pt.power = 0;
+                }
+            }
+            updateControlPanel();
+        }
+        
+        function selectPT(ptId) {
+            selectedPTSelect.value = ptId;
+            updateControlPanel(); 
+        }
+
+        // --- GEOMETRIC AND BLOCKING LOGIC (Unchanged) ---
+
+        function onSegment(p, q, r) {
+            return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+                    q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y));
+        }
+
+        function orientation(p, q, r) {
+            const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+            if (val === 0) return 0;
+            return (val > 0) ? 1 : 2;
+        }
+
+        function doIntersect(p1, q1, p2, q2) {
+            const o1 = orientation(p1, q1, p2);
+            const o2 = orientation(p1, q1, q2);
+            const o3 = orientation(p2, q2, p1);
+            const o4 = orientation(p2, q2, q1);
+            if (o1 !== o2 && o3 !== o4) { return true; }
+            if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+            if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+            if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+            if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+            return false;
+        }
+
+        function isPathBlocked(source, target) {
+            const p1 = { x: Number(source.x), y: Number(source.y) };
+            const q1 = { x: Number(target.x), y: Number(target.y) };
+
+            for (const mountain of mountains) {
+                const m = mountain;
+                const p_m1 = { x: m.x, y: m.y };             
+                const p_m2 = { x: m.x + m.w, y: m.y };     
+                const p_m3 = { x: m.x + m.w, y: m.y + m.h }; 
+                const p_m4 = { x: m.x, y: m.y + m.h };     
+
+                if (doIntersect(p1, q1, p_m1, p_m2)) return true; 
+                if (doIntersect(p1, q1, p_m2, p_m3)) return true; 
+                if (doIntersect(p1, q1, p_m3, p_m4)) return true; 
+                if (doIntersect(p1, q1, p_m4, p_m1)) return true; 
+            }
+            return false;
+        }
+       
+        function getDistance(c1, c2) {
+            return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2));
+        }
+
+        function isSignalSuccessful(source, target, range) {
+            const distance = getDistance(source, target);
+            if (distance > range) return false;
+            if (distance === 0) return false;
+            return !isPathBlocked(source, target);
+        }
+       
+        // --- PUZZLE VALIDATION LOGIC (Unchanged) ---
+        function getPT_RT_HitCount(pt) {
+            if (!pt.active || pt.power === 0) { return 0; }
+            const ptRange = powerRadii[pt.power];
+            const rts = components.filter(c => c.type === 'RT');
+            let hitCount = 0;
+            rts.forEach(rt => {
+                if (isSignalSuccessful(pt, rt, ptRange)) { hitCount++; }
+            });
+            return hitCount;
+        }
+
+        // NEW: Calculates how many Cities are covered *by this specific PT*
+        function getPTCityHitCount(pt) {
+            if (!pt.active || pt.power === 0) return 0;
+            
+            const ptRange = powerRadii[pt.power];
+            const cities = components.filter(c => c.type === 'C');
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            let hitCount = 0;
+
+            cities.forEach(city => {
+                // Check 1: Direct hit (PT -> City)
+                const isDirectHit = isSignalSuccessful(pt, city, ptRange);
+                
+                // Check 2: Single hop hit (PT -> RT -> City)
+                const isIndirectHit = activeRTs.some(rt => 
+                    isSignalSuccessful(pt, rt, ptRange) && isSignalSuccessful(rt, city, RT_FIXED_RADIUS)
+                );
+
+                if (isDirectHit || isIndirectHit) {
+                    hitCount++;
+                }
+            });
+
+            return hitCount;
+        }
+
+        function doesPtCoverAnyCity(pt, allActiveRTs) {
+            if (!pt.active || pt.power === 0) return false;
+            const ptRange = powerRadii[pt.power];
+            const cities = components.filter(c => c.type === 'C');
+
+            const coversDirectly = cities.some(city => isSignalSuccessful(pt, city, ptRange));
+            if (coversDirectly) return true;
+
+            const hitRTs = allActiveRTs.filter(rt => isSignalSuccessful(pt, rt, ptRange));
+            if (hitRTs.length === 0) return false; 
+
+            const coversIndirectly = cities.some(city => 
+                hitRTs.some(rt => isSignalSuccessful(rt, city, RT_FIXED_RADIUS))
+            );
+            
+            return coversIndirectly;
+        }
+
+        function checkAllPuzzleRequirements(state) {
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+            if (activePTs.length === 0) return { isSolved: false, details: [] };
+
+            const allActiveRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            let allReqsMet = true;
+            const details = activePTs.map(pt => {
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                const channelMet = (liveChannel === pt.reqChannel);
+                const cityCoverageMet = doesPtCoverAnyCity(pt, allActiveRTs);
+
+                if (!channelMet || !cityCoverageMet) { allReqsMet = false; }
+
+                return { id: pt.id, liveChannel, reqChannel: pt.reqChannel, channelMet, cityCoverageMet };
+            });
+
+            return { isSolved: allReqsMet, details };
+        }
+
+        function getCityCoverage() {
+            const activeRTs = components.filter(rt => rt.type === 'RT' && rtStates[rt.id]);
+            const activePTs = components.filter(pt => pt.type === 'PT' && pt.active && pt.power > 0);
+
+            const allCities = components.filter(c => c.type === 'C');
+
+            const coveredCities = allCities.filter(city => {
+                const isHitByPT = activePTs.some(pt => isSignalSuccessful(pt, city, powerRadii[pt.power]));
+                if (isHitByPT) return true;
+                const isHitByRT = activeRTs.some(rt => isSignalSuccessful(rt, city, RT_FIXED_RADIUS));
+                return isHitByRT;
+            });
+           
+            return { coveredCities, totalCities: allCities.length };
+        }
+
+        function updateRTStates() {
+            components.filter(c => c.type === 'RT').forEach(rt => rtStates[rt.id] = false);
+
+            const activePTs = components.filter(c => c.type === 'PT' && c.active && c.power > 0); 
+
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                const isHitByAnyPT = activePTs.some(pt => 
+                    isSignalSuccessful(pt, rt, powerRadii[pt.power])
+                );
+                if (isHitByAnyPT) { rtStates[rt.id] = true; }
+            });
+        }
+       
+        // --- RENDERING FUNCTIONS ---
+        function drawGrid() {
+            // 1. Clear the screen (REQUIRED)
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // 2. Grid Lines (COMMENTED OUT to hide them)
+            /*
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 0.5;
+           
+            for (let i = 0; i <= gridSizeX; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * UNIT_PIXELS, 0); 
+                ctx.lineTo(i * UNIT_PIXELS, canvasHeight);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= gridSizeY; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * UNIT_PIXELS);
+                ctx.lineTo(canvasWidth, i * UNIT_PIXELS); 
+                ctx.stroke();
+            }
+            */
+
+            // Draw Mountains (Rectangular)
+            ctx.fillStyle = 'rgba(0, 100, 0, 0.5)'; 
+            ctx.strokeStyle = 'darkgreen'; 
+            ctx.lineWidth = 2;
+           
+            mountains.forEach(mountain => {
+                const x = mountain.x * UNIT_PIXELS;
+                const y = mountain.y * UNIT_PIXELS;
+                const w = mountain.w * UNIT_PIXELS;
+                const h = mountain.h * UNIT_PIXELS;
+
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+
+        // HELPER: Draws the wedge fill
+        function drawWedge(ptX, ptY, pixelRadius, color, startAngle, endAngle) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(ptX, ptY); 
+            
+            if (startAngle > endAngle) {
+                ctx.arc(ptX, ptY, pixelRadius, startAngle, endAngle, false); 
+            } else {
+                ctx.arc(ptX, ptY, pixelRadius, startAngle, endAngle);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // RAYCASTING DRAW COMPONENTS - Using working logic
+        function drawComponents() {
+            drawGrid();
+
+            const angleStep = 0.5; 
+            const fullCircle = 2 * Math.PI;
+
+            // --- 1. Draw all DOTTED CONCENTRIC RINGS (P1-P4) for all PTs ---
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const center_x = pt.x * UNIT_PIXELS;
+                const center_y = pt.y * UNIT_PIXELS;
+
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Faint dotted white line
+
+                // Loop through P1 (index 1) to P4 (index 4)
+                for (let p = 1; p <= 4; p++) {
+                    const radius = powerRadii[p];
+                    if (radius <= 0) continue;
+
+                    const pixel_radius = radius * UNIT_PIXELS;
+                    
+                    ctx.setLineDash([3, 3]); // Dotted pattern
+                    ctx.beginPath();
+                    ctx.arc(center_x, center_y, pixel_radius, 0, fullCircle);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]); // Reset dash for the rest of the canvas
+            });
+            // --- END CONCENTRIC RING DRAW ---
+
+            function performRaycasting(component, isPT) {
+                const radius = isPT ? powerRadii[component.power] : RT_FIXED_RADIUS;
+                if (radius <= 0) return;
+                const center_x = component.x * UNIT_PIXELS;
+                const center_y = component.y * UNIT_PIXELS;
+                const pixel_radius = radius * UNIT_PIXELS;
+
+                let startAngle = 0;
+                let lastAngleWasClear = false;
+                
+                // --- COLOR DEFINITIONS ---
+                let fill_color = isPT ? 'rgba(0, 191, 255, 0.08)' : 'rgba(255, 255, 0, 0.06)';
+                let border_color = isPT ? 'rgba(0, 191, 255, 0.6)' : 'rgba(255, 255, 0, 0.5)';
+                const blocked_color = isPT ? 'rgba(0, 100, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)';
+
+                // --- HIGHLIGHT OVERRIDE ---
+                if (isPT && component.highlight) {
+                    fill_color = 'rgba(255, 105, 180, 0.08)'; 
+                    border_color = 'rgba(255, 105, 180, 0.6)'; 
+                }
+
+                if (isPT && component.highlight) {
+                    ctx.setLineDash([5, 3]);
+                } else {
+                    ctx.setLineDash([]);
+                }
+
+
+                for (let angle = 0; angle <= 360; angle += angleStep) {
+                    const currentRadians = angle * (Math.PI / 180);
+                    const prevRadians = (angle - angleStep) * (Math.PI / 180);
+
+                    const targetUnit = { 
+                        x: center_x / UNIT_PIXELS + radius * Math.cos(currentRadians), 
+                        y: center_y / UNIT_PIXELS + radius * Math.sin(currentRadians) 
+                    };
+                    const isClear = !isPathBlocked(component, targetUnit);
+
+                    if (isClear) {
+                        if (!lastAngleWasClear) {
+                            startAngle = prevRadians; 
+                        }
+                        
+                        ctx.strokeStyle = border_color;
+                        ctx.lineWidth = 1.5;
+                        
+                        const prev_x = center_x + pixel_radius * Math.cos(prevRadians);
+                        const prev_y = center_y + pixel_radius * Math.sin(prevRadians);
+                        const curr_x = center_x + pixel_radius * Math.cos(currentRadians);
+                        const curr_y = center_y + pixel_radius * Math.sin(currentRadians);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(prev_x, prev_y);
+                        ctx.lineTo(curr_x, curr_y);
+                        ctx.stroke();
+
+                    } else { 
+                        if (lastAngleWasClear) {
+                            drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, currentRadians);
+                        }
+                        
+                        ctx.strokeStyle = blocked_color; 
+                        ctx.lineWidth = 0.5;
+                        
+                        const near_x = center_x + (pixel_radius * 0.95) * Math.cos(prevRadians);
+                        const near_y = center_y + (pixel_radius * 0.95) * Math.sin(prevRadians);
+                        
+                        const edge_x = center_x + pixel_radius * Math.cos(currentRadians);
+                        const edge_y = center_y + pixel_radius * Math.sin(currentRadians);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(near_x, near_y);
+                        ctx.lineTo(edge_x, edge_y);
+                        ctx.stroke();
+                    }
+                    lastAngleWasClear = isClear;
+                }
+
+                if (lastAngleWasClear) {
+                    drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, fullCircle);
+                }
+                
+                ctx.setLineDash([]);
+            }
+            
+            // 2. Execute raycasting draw
+            components.filter(c => c.type === 'PT' && c.active && c.power > 0).forEach(pt => {
+                performRaycasting(pt, true);
+            });
+
+            // 3. Draw ACTIVE RT ranges
+            components.filter(c => c.type === 'RT' && rtStates[c.id]).forEach(rt => {
+                performRaycasting(rt, false);
+            });
+            
+            // 4. Draw components points and labels
+            const currentSelectedID = document.getElementById('selectedPT').value;
+            const console1_ID = console1SelectedPT;
+            const console2_ID = console2SelectedPT;
+
+            components.forEach(c => {
+                const center_x = c.x * UNIT_PIXELS;
+                const center_y = c.y * UNIT_PIXELS;
+                let size = 5;
+
+                // Determine if this component is actively selected by EITHER console
+                const isConsoleSelected = (c.id === console1_ID || c.id === console2_ID);
+
+                // --- NEW: DRAW SELECTION HIGHLIGHT ---
+                if (isConsoleSelected) {
+                    ctx.beginPath();
+                    ctx.arc(center_x, center_y, size + 8, 0, 2 * Math.PI); // Outer ring
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#00FF00'; // Bright Green for Console Selection
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00FF00'; // Green Glow
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; // Reset glow
+                }
+                // -------------------------------------
+
+
+                let color = 'white';
+                if (c.type === 'PT') {
+                    color = c.active ? (c.power > 0 ? 'skyblue' : 'darkgray') : 'red';
+                    size = 7;
+                } else if (c.type === 'RT') {
+                    color = rtStates[c.id] ? 'yellow' : '#666'; 
+                    size = 6;
+                } else if (c.type === 'C') {
+                    color = 'lightcoral';
+                    size = 4;
+                }
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(center_x, center_y, size, 0, 2 * Math.PI);
+                ctx.fill();
+               
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText(c.id, center_x + size + 2, center_y + 3);
+            });
+        }
+
+        // --- DRAG LOGIC ---
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) / UNIT_PIXELS,
+                y: (evt.clientY - rect.top) / UNIT_PIXELS
+            };
+        }
+
+        function isPointInComponent(point, component) {
+            const size = component.type === 'PT' ? 0.8 : (component.type === 'RT' ? 0.6 : 0.4);
+            const dist = getDistance(point, component);
+            return dist <= size;
+        }
+        
+        canvas.addEventListener('mousedown', (e) => {
+            const mousePos = getMousePos(canvas, e);
+            
+            const orderedComponents = components.filter(c => c.type === 'C').concat(
+                components.filter(c => c.type === 'RT'),
+                components.filter(c => c.type === 'PT')
+            );
+            
+            dragTarget = orderedComponents.find(c => isPointInComponent(mousePos, c));
+
+            if (dragTarget) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+                
+                canvas.classList.add('dragging');
+                dragOffsetX = mousePos.x - dragTarget.x;
+                dragOffsetY = mousePos.y - dragTarget.y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (dragTarget) {
+                const mousePos = getMousePos(canvas, e);
+                let newX = Math.max(0, Math.min(gridSizeX, mousePos.x - dragOffsetX));
+                let newY = Math.max(0, Math.min(gridSizeY, mousePos.y - dragOffsetY));
+                dragTarget.x = parseFloat(newX.toFixed(1));
+                dragTarget.y = parseFloat(newY.toFixed(1));
+                
+                updateCanvasVisuals(); // <--- USE FAST UPDATE HERE
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (dragTarget) {
+                dragTarget = null;
+                canvas.classList.remove('dragging');
+                updateControlPanel(); // <--- USE FULL UPDATE HERE (To refresh coords list)
+            }
+        });
+        
+        // --- UI/Logic Functions (Validation & Status) ---
+
+        // Updates the PT object when a dropdown is changed
+        function updatePTSetting(selectElement, type) { 
+            
+            // FIX: Use the 'data-pt-id' attribute to get the correct ID,
+            // instead of splitting the 'id' string.
+            const ptId = selectElement.getAttribute('data-pt-id'); 
+            const newValue = parseInt(selectElement.value);
+
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                if (type === 'power') {
+                    pt.power = newValue;
+                    pt.active = newValue > 0;
+                    // FIX 1: Save the manual power to lastPower
+                    if (newValue > 0) { 
+                        pt.lastPower = newValue; 
+                    }
+                } else if (type === 'reqChannel') {
+                    pt.reqChannel = newValue;
+                }
+            }
+            updateControlPanel();
+        }
+
+
+        // --- Function: togglePT (around line 748) ---
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                if (pt.active) {
+                    // ACTION: Turning OFF. Save current power, set active/power to 0.
+                    pt.lastPower = pt.power; // Save active power
+                    pt.active = false;
+                    pt.power = 0;
+                } else {
+                    // ACTION: Turning ON. Restore the last saved power.
+                    pt.active = true;
+                    pt.power = pt.lastPower || pt.reqPower; // Use lastPower, default to reqPower
+                }
+            }
+            updateControlPanel();
+        }
+
+        // New: Outputs the current coordinates and power of all components for easy copying.
+        function updateCoordinateOutput() {
+            const outputDiv = document.getElementById('coordinateOutput');
+            let output = '<b>PT Coordinates (X, Y, Pwr, Req Ch/City, Live Hits):</b><br>';
+            
+            // Get active RTs for accurate City Coverage check
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const liveCh = getPT_RT_HitCount(pt) + 1;
+                const liveCity = getPTCityHitCount(pt, activeRTs); 
+                const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
+                const activeStatus = pt.active ? 'ON' : 'OFF'; // NEW: Capture active status
+
+                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, active: '${activeStatus}', reqP: ${pt.reqPower}, reqCh: ${pt.reqChannel}, reqCity: ${pt.reqCities}, liveP: ${powerDisplay}, liveCh: ${liveCh}, liveCity: ${liveCity} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+            
+            output += '<b>RT Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                output += `<div>{ id: '${rt.id}', type: 'RT', x: ${rt.x.toFixed(1)}, y: ${rt.y.toFixed(1)} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+
+            output += '<b>City Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'C').forEach(city => {
+                output += `<div>{ id: '${city.id}', type: 'C', x: ${city.x.toFixed(1)}, y: ${city.y.toFixed(1)} },</div>`;
+            });
+
+            outputDiv.innerHTML = output;
+        }
+
+        function updateAllDistances() {
+            const selectedPTId = selectedPTSelect.value;
+            const pt = components.find(c => c.id === selectedPTId);
+            if (!pt) return;
+
+            distancesDiv.innerHTML = '';
+           
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                const dist = getDistance(pt, rt).toFixed(2);
+                const isSignal = isSignalSuccessful(pt, rt, powerRadii[pt.power]);
+                const status = rtStates[rt.id] ? `<span class="rt-active">(ON)</span>` : `<span class="rt-inactive">(OFF)</span>`;
+               
+                let hitStatus;
+                if (isSignal) {
+                    hitStatus = `<span class="pass">HIT (Clear)</span>`;
+                } else if (getDistance(pt, rt) <= powerRadii[pt.power]) {
+                    hitStatus = `<span class="fail">BLOCKED!</span>`;
+                } else {
+                    hitStatus = `<span class="fail">MISS (Out of Range)</span>`;
+                }
+               
+                distancesDiv.innerHTML += `<div>${rt.id}: ${dist} units ${status} ${hitStatus}</div>`;
+            });
+           
+            distancesDiv.innerHTML += `<hr style="border-color:#555">`;
+
+            components.filter(c => c.type === 'C').forEach(city => {
+                const dist = getDistance(pt, city).toFixed(2);
+                const isSignal = isSignalSuccessful(pt, city, powerRadii[pt.power]);
+
+                let hitStatus;
+                if (isSignal) {
+                    hitStatus = `<span class="pass">Direct Hit (Clear)</span>`;
+                } else if (getDistance(pt, city) <= powerRadii[pt.power]) {
+                    hitStatus = `<span class="fail">BLOCKED!</span>`;
+                } else {
+                    hitStatus = `<span class="fail">Miss (Out of Range)</span>`;
+                }
+
+                distancesDiv.innerHTML += `<div>${city.id}: ${dist} units - ${hitStatus}</div>`;
+            });
+        }
+
+        function updateCoverageDetails() {
+            const { coveredCities, totalCities } = getCityCoverage();
+            const totalActiveRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]).length;
+            const totalActivePTs = components.filter(c => c.type === 'PT' && c.active && c.power > 0).length;
+
+            const validation = checkAllPuzzleRequirements(currentSolveState);
+            
+            let summaryHTML = '';
+            if (currentSolveState === 'custom') {
+                summaryHTML = `<div class="not-solved">CUSTOM MODE</div>`;
+            } else if (validation.isSolved) {
+                summaryHTML = `<div class="solved">STATE ${currentSolveState === 'state1' ? '1' : '2'} SOLVED!</div>`;
+            } else {
+                summaryHTML = `<div class="not-solved">STATE ${currentSolveState === 'state1' ? '1' : '2'} NOT SOLVED</div>`;
+            }
+
+            coverageDetailsDiv.innerHTML = `
+                ${summaryHTML}
+                <hr style="border-color:#555">
+                <div>**Cities Covered:** <span class="pass">${coveredCities.length}</span> / ${totalCities}</div>
+                <div>Active PTs (Total): ${totalActivePTs}</div>
+                <div>Active RTs (Total): ${totalActiveRTs}</div>
+            `;
+        }
+
+        function updateCurrentPTStates() {
+            currentPTStatesDiv.innerHTML = '';
+            const validation = checkAllPuzzleRequirements(currentSolveState);
+
+            components.filter(c => c.type === 'PT' && c.active).forEach(pt => {
+                const ptValidation = validation.details.find(d => d.id === pt.id);
+                if (!ptValidation) return;
+
+                const { liveChannel, reqChannel, channelMet, cityCoverageMet } = ptValidation;
+
+                const channelStatus = channelMet 
+                    ? `<span class="pass">Ch: ${liveChannel}/${reqChannel} ✅</span>` 
+                    : `<span class="fail">Ch: ${liveChannel}/${reqChannel} ❌</span>`;
+                
+                const cityStatus = cityCoverageMet
+                    ? `<span class="pass">City ✅</span>`
+                    : `<span class="fail">City ❌</span>`;
+
+                currentPTStatesDiv.innerHTML += `
+                    <div>
+                        ${pt.id} (P${pt.power}) - ${channelStatus} | ${cityCoverageMet ? '' : `<span class="fail">NO CITY COVERAGE</span>`}
+                    </div>`;
+            });
+
+            components.filter(c => c.type === 'PT' && !c.active).forEach(pt => {
+                currentPTStatesDiv.innerHTML += `
+                    <div style="color:#666">
+                        ${pt.id} (P${pt.power}) - Inactive
+                    </div>`;
+            });
+            
+            updateManualControls();
+        }
+
+        // Renders the dropdown controls for all 12 PTs below the map
+        function createManualControls() {
+            bottomPtControlsDiv.innerHTML = '';
+            const allPTs = components.filter(c => c.type === 'PT');
+
+            allPTs.forEach(pt => {
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                // FIX: Use the individual PT hit counter for initialization
+                const liveCityCount = getPTCityHitCount(pt); 
+// - to change over the affected boxes so you know which ones are bad signals when designing
+//                const highlightClass = pt.highlight ? 'highlight' : '';
+                const highlightClass = ''; // Apply highlight class
+                
+                let powerOptions = '';
+                for (let p = 0; p <= 4; p++) {
+                    powerOptions += `<option value="${p}" ${pt.power === p ? 'selected' : ''}>P${p}</option>`;
+                }
+                
+                let channelOptions = '';
+                for (let c = 1; c <= 5; c++) {
+                    channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
+                }
+                
+                // NEW: Options for required Cities (set max to 5)
+                let reqCitiesOptions = '';
+                for (let c = 1; c <= 5; c++) {
+                    reqCitiesOptions += `<option value="${c}" ${pt.reqCities === c ? 'selected' : ''}>Req C ${c}</option>`;
+                }
+                
+const controlHTML = `
+                    <div class="pt-control-box ${highlightClass}" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
+                        <h5>${pt.id}</h5>
+                        
+                        <div class="control-status-row">
+                            <button id="toggle-${pt.id}" data-pt-id="${pt.id}">
+                                ${pt.active ? 'Active' : 'Inactive'}
+                            </button>
+                            <select id="pwr-sel-${pt.id}" data-pt-id="${pt.id}" data-type="power">
+                                ${powerOptions}
+                            </select>
+                        </div>
+
+                        <div class="control-status-row">
+                            <select id="req-ch-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqChannel">
+                                ${channelOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-ch-val-${pt.id}">L: ${liveChannel}</span>
+                        </div>
+                        
+                        <div class="control-status-row">
+                            <select id="req-cities-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqCities">
+                                ${reqCitiesOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-city-val-${pt.id}">C: ${getPTCityHitCount(pt)}</span>
+                        </div>
+                    </div>
+                `;
+                bottomPtControlsDiv.innerHTML += controlHTML;
+            });
+            
+            // Add event listeners (unchanged)
+            bottomPtControlsDiv.addEventListener('change', handleControlChange);
+            bottomPtControlsDiv.addEventListener('click', handleControlClick);
+
+            updateManualControls();
+        }
+
+        // --- NEW DELEGATED EVENT HANDLERS ---
+
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.getAttribute('data-pt-id');
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
+
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                        if (newValue > 0) { pt.lastPower = newValue; }
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    } else if (type === 'reqCities') { // NEW: Handle required cities
+                        pt.reqCities = newValue;
+                    }
+                }
+                updateControlPanel();
+            }
+        }
+
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+        
+        function selectPT(ptId) {
+            selectedPTSelect.value = ptId;
+            updateControlPanel(); 
+        }
+        
+         // Updates the UI state of the controls when data changes
+        function updateManualControls() {
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                // FIX: Call the new individual hit counter
+                const liveCityCount = getPTCityHitCount(pt); 
+                
+                const powerSelect = document.getElementById(`pwr-sel-${pt.id}`);
+                const channelSelect = document.getElementById(`req-ch-sel-${pt.id}`);
+                const reqCitySelect = document.getElementById(`req-city-sel-${pt.id}`);
+                const toggleBtn = document.getElementById(`toggle-${pt.id}`);
+                const liveChSpan = document.getElementById(`live-ch-val-${pt.id}`);
+                const liveCitySpan = document.getElementById(`live-city-val-${pt.id}`); 
+
+                // Update live data and visual state
+                if (liveChSpan) liveChSpan.textContent = liveChannel;
+                if (liveCitySpan) liveCitySpan.textContent = liveCityCount; // UPDATE CITY COUNT
+                
+                if (toggleBtn) {
+                    toggleBtn.textContent = pt.active ? 'Active' : 'Inactive';
+                    toggleBtn.style.backgroundColor = pt.active ? '#28a745' : '#dc3545';
+                }
+                
+                // Ensure dropdown values match the PT object state
+                if (powerSelect) powerSelect.value = pt.power;
+                if (channelSelect) channelSelect.value = pt.reqChannel;
+                if (reqCitySelect) reqCitySelect.value = pt.reqCities;
+            });
+        }
+        
+        // Fast update: Only redraws the canvas (used during dragging)
+        function updateCanvasVisuals() {
+            updateRTStates();
+            drawComponents();
+        }
+
+        // --- FLOATING MESSAGE LOGIC ---
+        function updateFloatingMessage() {
+            const msgBox = document.getElementById('floating-message');
+            if (!msgBox) return;
+
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+
+            // 1a. Get City Coverage Data
+            const cityData = getCityCoverage();
+            
+            // 1b. Calculate Total Power
+            const totalPower = activePTs.reduce((sum, pt) => sum + pt.power, 0);
+
+            // 2. Check Channels (Are ALL active PTs hitting their exact required count?)
+            const allChannelsValid = activePTs.every(pt => getPT_RT_HitCount(pt) + 1 === pt.reqChannel);
+            const channelStatusColor = allChannelsValid ? '#00ff00' : '#ff3333';
+            const channelStatusText = allChannelsValid ? 'TRUE' : 'FALSE';
+            
+            // 3. Check for "Bad" Towers
+            const badTowerIds = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
+            const activeBadTowers = activePTs.filter(pt => badTowerIds.includes(pt.id));
+            
+            // 4. METER CALCULATION
+            // Logic: 0-22 fills first 75%. >22 fills the rest.
+            let meterWidth = 0;
+            let meterClass = '';
+            
+            if (totalPower <= 22) {
+                // Scale 0-22 to 0-75%
+                meterWidth = (totalPower / 22) * 75;
+                meterClass = ''; // Default Green
+            } else {
+                // Scale >22 to 75-100% (capped at 100%)
+                // We'll assume max "reasonable" power is roughly 42 before critical failure
+                meterWidth = 75 + ((totalPower - 22) / 20) * 25;
+                if (meterWidth > 100) meterWidth = 100;
+                meterClass = 'overload'; // Bright Orange
+            }
+
+            // 5. Build the HTML
+            let htmlContent = `ACTIVE TOWERS: ${activePTs.length}<br>`;
+
+            // NEW: City Coverage Color Logic
+            const citiesCovered = cityData.coveredCities.length;
+            const totalCities = cityData.totalCities;
+            const cityColor = (citiesCovered === totalCities) ? '#00ff00' : '#ff3333'; // Green if full, Red if missing
+            
+            htmlContent += `CITIES COVERED: <span style="color: ${cityColor}; font-weight: bold;">${citiesCovered}/${totalCities}</span><br>`;
+
+            htmlContent += `CHANNELS SET: <span style="color: ${channelStatusColor}; font-weight: bold;">${channelStatusText}</span><br>`;
+            
+            if (activeBadTowers.length > 0) {
+                htmlContent += `<span class="warning-text">⚠ RESTRICTED TOWERS: ${activeBadTowers.length}</span><br>`;
+            }
+
+            htmlContent += `TOTAL POWER: ${totalPower}`;
+            
+            // Inject Meter
+            htmlContent += `
+                <div class="meter-container">
+                    <div class="meter-fill ${meterClass}" style="width: ${meterWidth}%;"></div>
+                </div>
+            `;
+
+            // 6. Determine System Status (Text)
+            if (totalPower > 22) {
+                htmlContent += `<span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
+                msgBox.style.borderColor = '#ff3333';
+                msgBox.style.color = '#ff3333';
+            } else {
+                htmlContent += `<span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
+                msgBox.style.borderColor = '#00ff00';
+                msgBox.style.color = '#00ff00';
+            }
+
+            msgBox.innerHTML = htmlContent;
+/*
+            // Show warning if bad towers are active
+            if (activeBadTowers.length > 0) {
+                const badNums = activeBadTowers.map(t => t.id.split('-')[1]).join(', ');
+                htmlContent += `<span class="warning-text">⚠ RESTRICTED: ${badNums}</span><br>`;
+            }
+*/
+        }
+
+
+        // --- WIN CONDITION CHECK ---
+        function checkWinCondition() {
+            // 1. Define the Winning State (State 1)
+            // Active: A, B, C, G, H, I, K (Renamed to 1, 2, 3, 7, 8, 9, 11 in your new data)
+            // Note: Ensure these IDs match your current component array
+            const targetActiveIDs = ['PT-1', 'PT-2', 'PT-3', 'PT-7', 'PT-8', 'PT-9', 'PT-11'];
+            
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+            const activeIDs = activePTs.map(c => c.id);
+
+            // 2. Check: Are the correct PTs active? (Must have exactly these 7, no extras)
+            const isCorrectSet = targetActiveIDs.every(id => activeIDs.includes(id)) && 
+                                 activeIDs.length === targetActiveIDs.length;
+
+            if (!isCorrectSet) return; // Wrong towers are on
+
+            // 3. Check: Are all requirements met?
+            const validation = checkAllPuzzleRequirements('custom'); // Use 'custom' to check current state
+            
+            if (validation.isSolved) {
+                const overlay = document.getElementById('celebration-overlay');
+                // Only show if not already active to avoid spamming
+                if (!overlay.classList.contains('active')) {
+                    overlay.classList.add('active');
+                }
+            }
+        }
+
+        function updateControlPanel() {
+            updateCanvasVisuals(); // Draw the map first
+            
+            // Then do the heavy text calculations
+            updateAllDistances();
+            updateCoverageDetails();
+            updateCurrentPTStates();
+            updateCoordinateOutput();
+            updateConsoles();
+            updateManualControls(); // Updates the Dev Bar
+
+            updateFloatingMessage();
+            checkWinCondition(); // <--- NEW CHECK
+        }
+        
+        function applySolveStatePresets(state) {
+            currentSolveState = state;
+
+            // NEW: Updated to new PT-1, PT-2, etc. IDs
+            const STATE1_OFF_IDS = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12']; // D, E, F, J, L
+            const STATE2_IDS = ['PT-7', 'PT-8', 'PT-9', 'PT-10', 'PT-11', 'PT-12']; // State 2 is 7-12
+
+            // 1. Reset ALL PTs 
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                pt.active = false;
+                pt.power = 0;
+                // Note: reqChannel and lastPower are persistent and not reset here
+            });
+           
+            if (state === 'first') {
+                // NEW: FIRST SETTING (STARTUP) - 10 ON, 2 OFF
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    // Set Active Status
+                    if (['PT-7', 'PT-8'].includes(pt.id)) { // G, H
+                        pt.active = false;
+                        pt.power = 0;
+                    } else {
+                        pt.active = true;
+                        // Set specific power level from user list
+                        if (pt.id === 'PT-1') { pt.power = 1; pt.reqChannel = 2;} // A
+                        if (pt.id === 'PT-2') { pt.power = 3; pt.reqChannel = 4;} // B
+                        if (pt.id === 'PT-3') { pt.power = 3; pt.reqChannel = 5;} // C
+                        if (pt.id === 'PT-4') { pt.power = 4; pt.reqChannel = 3;} // D
+                        if (pt.id === 'PT-5') { pt.power = 4; pt.reqChannel = 2;} // E
+                        if (pt.id === 'PT-6') { pt.power = 4; pt.reqChannel = 5;} // F
+                        if (pt.id === 'PT-9') { pt.power = 4; pt.reqChannel = 4;} // I
+                        if (pt.id === 'PT-10') { pt.power = 4; pt.reqChannel = 2;} // J
+                        if (pt.id === 'PT-11') { pt.power = 2; pt.reqChannel = 3;} // K
+                        if (pt.id === 'PT-12') { pt.power = 2; pt.reqChannel = 4;} // L
+                    }
+                });
+            } else if (state === 'state1') {
+                // SOLVE STATE 1: PT-D, E, F, J, L are OFF (7 PTs ON)
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    const isActive = ['PT-1', 'PT-2', 'PT-3', 'PT-7', 'PT-8', 'PT-9', 'PT-11'].includes(pt.id);
+
+                    if (isActive) {
+                        pt.active = true;
+                        // Synchronize required properties to the final solve state:
+                        if (pt.id === 'PT-1') { pt.reqPower = 4; pt.reqChannel = 5; pt.reqCities = 3; pt.power = 4; }
+                        if (pt.id === 'PT-2') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 1; pt.power = 1; }
+                        if (pt.id === 'PT-3') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 4; pt.power = 3; }
+                        if (pt.id === 'PT-7') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-8') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-9') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 1; pt.power = 2; }
+                        if (pt.id === 'PT-11') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 2; pt.power = 4; }
+                    } else {
+                        // Inactive PTs: 4, 5, 6, 10, 12
+                        pt.active = false;
+                        pt.power = 0;
+                    }
+                });
+            } else if (state === 'state2') {
+                STATE2_IDS.forEach(id => {
+                    const pt = components.find(c => c.id === id);
+                    if (pt) {
+                        pt.active = true;
+                        pt.power = pt.reqPower;
+                    }
+                });
+            }
+            
+            updateControlPanel();
+        }
+
+// Handle clicks inside the Game Consoles
+// --- GAME CONSOLE LOGIC ---
+
+        function handleConsoleInput(e, consoleNum) {
+            const target = e.target;
+            
+            // 1. Handle Selector Buttons (A-F or G-L)
+            if (target.classList.contains('selector-btn')) {
+                const newPtId = target.getAttribute('data-pt');
+                if (consoleNum === 1) console1SelectedPT = newPtId;
+                else console2SelectedPT = newPtId;
+
+                // --- NEW: Sync with Map Inspection ---
+                // This tells the map logic "This is the tower we are looking at"
+                const selectBox = document.getElementById('selectedPT');
+                if(selectBox) selectBox.value = newPtId;
+                // -------------------------------------
+
+                updateControlPanel(); 
+                return;
+            }
+
+            // 2. Handle Game Control Buttons (Power, Level, Channel)
+            if (target.classList.contains('game-btn')) {
+                
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                const ptId = consoleNum === 1 ? console1SelectedPT : console2SelectedPT;
+                const pt = components.find(c => c.id === ptId);
+
+                if (target.id.includes('toggle')) {
+                    if (pt.active) {
+                        pt.lastPower = pt.power;
+                        pt.active = false;
+                        pt.power = 0;
+                    } else {
+                        pt.active = true;
+                        pt.power = pt.lastPower || pt.reqPower;
+                    }
+                } else if (target.id.includes('pwr')) {
+                    if (!pt.active) pt.active = true; 
+                    let newP = pt.power + 1;
+                    if (newP > 4) newP = 0; // Cycle 0-4 now to allow turning off via power cycle
+                    
+                    pt.power = newP;
+                    if (newP > 0) pt.lastPower = newP;
+                    if (newP === 0) pt.active = false;
+
+                } else if (target.id.includes('ch')) {
+                    let newC = pt.reqChannel + 1;
+                    // Cycle 2 -> 3 -> 4 -> 5 -> 2
+                    if (newC > 5) newC = 2; 
+                    // Safety catch: If currently 0 or 1, jump to 2
+                    if (newC < 2) newC = 2;
+                    pt.reqChannel = newC;
+                }
+
+                updateControlPanel();
+            }
+        }
+
+        // Updates the lights and text on the Game Consoles
+        function updateConsoles() {
+            // Helper to update a single console
+            const updateOne = (consoleNum, ptId) => {
+                const pt = components.find(c => c.id === ptId);
+                const base = `c${consoleNum}`; // e.g., "c1" or "c2"
+                const consoleEl = document.getElementById(`console-${consoleNum}`);
+
+                // 1. Highlight the active selector button
+                const selectors = consoleEl.querySelectorAll('.selector-btn');
+                selectors.forEach(btn => {
+                    if (btn.getAttribute('data-pt') === ptId) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                });
+
+                // 2. Update On/Off Button
+                const btnToggle = document.getElementById(`${base}-toggle`);
+                if (pt.active) {
+                    btnToggle.style.backgroundColor = '#28a745'; // Green
+                    btnToggle.textContent = "ON";
+                    btnToggle.style.boxShadow = "0 0 15px #28a745";
+                    btnToggle.style.borderColor = "#fff";
+                } else {
+                    btnToggle.style.backgroundColor = '#dc3545'; // Red
+                    btnToggle.textContent = "OFF";
+                    btnToggle.style.boxShadow = "none";
+                    btnToggle.style.borderColor = "#444";
+                }
+
+                // 3. Update Power Level Button
+                const btnPwr = document.getElementById(`${base}-pwr`);
+                const pwrColors = ['#6c757d', '#ffc107', '#fd7e14', '#dc3545', '#6f42c1']; // Grey - 6c757d, Yellow - ffc107, Orange - fd7e14, Red - dc3545, Purple - 6f42c1
+                btnPwr.textContent = `P${pt.power}`;
+                btnPwr.style.backgroundColor = pwrColors[pt.power];
+                
+                // 4. Update Channel Button
+                const btnCh = document.getElementById(`${base}-ch`);
+                const chColors = ['#6c757d', '#28a745', '#17a2b8', '#007bff', '#6f42c1', '#ff69b4']; // Grey - 6c757d, Green (spaceholder) - 28a745, Cyan - 17a2b8, Blue - 007bff, Violet -  6f42c1, Pink - ff69b4, Green - 28a745,
+                btnCh.textContent = `C${pt.reqChannel}`;
+                btnCh.style.backgroundColor = chColors[pt.reqChannel];
+            };
+
+            // Run for both consoles
+            updateOne(1, console1SelectedPT);
+            updateOne(2, console2SelectedPT);
+        }
+
+        // --- MAP OVERLAY CALIBRATION (Synchronized) ---
+        function syncMapSettings(type, value) {
+            // 1. Update both inputs (Slider and Number Box)
+            const slider = document.getElementById(`map-${type}`);
+            const number = document.getElementById(`map-${type}-num`);
+            
+            if (slider) slider.value = value;
+            if (number) number.value = value;
+
+            // 2. Apply to the Overlay
+            updateMapVisuals();
+        }
+
+        function updateMapVisuals() {
+            const overlay = document.getElementById('map-overlay');
+            if (!overlay) return;
+
+            const opacity = document.getElementById('map-opacity').value;
+            const scale = document.getElementById('map-scale').value;
+            const x = document.getElementById('map-x').value;
+            const y = document.getElementById('map-y').value;
+
+            overlay.style.opacity = opacity;
+            overlay.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+        }
+
+ function initialize() {
+            // Populate the "Select PT to Inspect" dropdown
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const option = document.createElement('option');
+                option.value = pt.id;
+                option.textContent = pt.id;
+                selectedPTSelect.appendChild(option);
+            });
+           
+            selectedPTSelect.addEventListener('change', updateControlPanel);
+            solveStateSelect.addEventListener('change', (event) => {
+                applySolveStatePresets(event.target.value);
+            });
+
+            // --- NEW: Main Menu Toggle Logic ---
+            const mainMenuBtn = document.getElementById('main-menu-btn');
+            const sidebarContent = document.getElementById('sidebar-content');
+
+            // NEW: Start collapsed by default
+            sidebarContent.classList.add('collapsed');
+            mainMenuBtn.textContent = "Pylon Puzzle Controls ▲";
+
+            mainMenuBtn.addEventListener('click', () => {
+                sidebarContent.classList.toggle('collapsed');
+                // Optional: Change arrow direction
+                if (sidebarContent.classList.contains('collapsed')) {
+                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▲";
+                } else {
+                    mainMenuBtn.textContent = "Pylon Puzzle Controls ▼";
+                }
+            });
+
+            // --- NEW: Dev Tool Toggle Logic ---
+            const toggleBtn = document.getElementById('toggle-collapse-btn');
+            const devBar = document.getElementById('dev-bar-container');
+            const sideDetails = document.getElementById('collapsible-controls');
+
+            // --- NEW: Start collapsed by default ---
+            devBar.classList.add('hidden');
+            sideDetails.classList.add('hidden');
+            toggleBtn.textContent = "Show Dev Tools";
+
+            toggleBtn.addEventListener('click', () => {
+                devBar.classList.toggle('hidden');
+                sideDetails.classList.toggle('hidden');
+                toggleBtn.textContent = devBar.classList.contains('hidden') ? "Show Dev Tools" : "Hide Dev Tools";
+            });
+
+            // --- NEW: Console Event Listeners ---
+            // This connects the HTML clicks to the JavaScript logic
+            document.getElementById('console-1').addEventListener('click', (e) => handleConsoleInput(e, 1));
+            document.getElementById('console-2').addEventListener('click', (e) => handleConsoleInput(e, 2));
+           
+            // Create the list of manual PT controls once
+            createManualControls(); 
+            
+            // Start on State 1
+            applySolveStatePresets('first'); 
+
+            // Force the map to update immediately using the values you set in the HTML
+            updateMapVisuals();
+        }
+
+        // --- RUN INITIALIZATION ---
+        initialize();
+    </script>
+</body>
+</html>
