@@ -197,6 +197,13 @@
             /* SIZE CONTROL: Set your exact box dimensions here */
             width: 180px;   /* <--- CHANGE THIS to widen/narrow */
             height: 215px;  /* <--- CHANGE THIS to make taller/shorter */
+            overflow: visible;
+
+            /*
+            max-height: 215px;
+            height: auto; //Auto height based on content
+            */
+
             
             /* Visual Styles */
             font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
@@ -677,13 +684,19 @@
         <div id="controls">
            
             <div id="sidebar-content">
+                <div id="game-status-panel" style="background: #222; border: 2px solid #007bff; padding: 15px; margin-bottom: 20px; border-radius: 5px; text-align: center;">
+                    <div id="level-indicator" style="color: #007bff; font-family: 'Orbitron', sans-serif; font-size: 1.2em; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 5px;">LEVEL 1</div>
+                    <div id="console-message" style="color: #fff; font-size: 1.0em; line-height: 1.4; font-weight: bold;">System Initializing...</div>
+                </div>
                 
                 <div class="control-group">
-                    <label for="solveState">Select Solve State:</label>
+                    <label for="solveState">Select Game State:</label>
                     <select id="solveState">
-                        <option value="first">First Setting (All On)</option>
-                        <option value="state1">Solve State 1</option>
-                        <option value="custom">Custom (Manual Control)</option>
+                        <option value="level1">Level 1 (Startup)</option>
+                        <option value="level2">Level 2 (Power)</option>
+                        <option value="level3">Level 3 (Channel)</option>
+                        <option value="level4">Level 4 (Success - Full Solve)</option>
+                        <option value="custom">Custom</option>
                     </select>
                     <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Show Dev Tools</button>
                 </div>
@@ -827,20 +840,79 @@
     </div>
 -->
 
+<div id="modal-overlay" class="modal-overlay closed">
+        <div class="modal-content">
+            <h1 class="modal-title">SYSTEM ALERT</h1>
+            <div id="modal-msg" class="modal-msg">Task Complete</div>
+            <button id="modal-btn" class="modal-btn">CONTINUE</button>
+        </div>
+    </div>
+
+    <div id="celebration-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:31000; flex-direction:column; justify-content:center; align-items:center;">
+        <div class="celebration-text">NETWORK ONLINE</div>
+        <div class="celebration-sub">System Resetting in 10s...</div>
+    </div>
+
     <script>
-        // --- GLOBAL CONSTANTS & SETUP ---
+        // --- UI CONSTANTS ---
         const canvas = document.getElementById('networkCanvas');
         const ctx = canvas.getContext('2d');
+        const selectedPTSelect = document.getElementById('selectedPT');
+        const solveStateSelect = document.getElementById('solveState');
+        const bottomPtControlsDiv = document.getElementById('pt-control-bar'); 
+        const distancesDiv = document.getElementById('distances');
+        const coverageDetailsDiv = document.getElementById('coverageDetails');
+        const currentPTStatesDiv = document.getElementById('currentPTStates');
+        const coordinateOutputDiv = document.getElementById('coordinateOutput');
+
+        // --- MAP CONSTANTS ---
         const gridSizeX = 64; 
         const gridSizeY = 36; 
-        const UNIT_PIXELS = canvas.height / gridSizeY; // 16
+        const UNIT_PIXELS = canvas.height / gridSizeY; 
         const canvasWidth = 1024;
         const canvasHeight = 576; 
-        const RT_FIXED_RADIUS = 4.0; // RTs fixed at 4.0U
+        const RT_FIXED_RADIUS = 4.0; 
+        const powerRadii = { 0: 0.0, 1: 2.0, 2: 4.0, 3: 6.0, 4: 8.5 }; 
 
-        // Radii Mapping: P3 = 5.0U, P4 = 7.0U
-        const powerRadii = { 0: 0.0, 1: 2.0, 2: 4.0, 3: 6.0, 4: 8.5 };
+        // --- HELPER FUNCTIONS (Defined Early) ---
+        
+        function closeIntroModal() {
+            const modal = document.getElementById('intro-modal');
+            if (modal) modal.classList.add('closed');
+        }
 
+        function showModal(msg, callback) {
+            const modal = document.getElementById('modal-overlay');
+            const msgDiv = document.getElementById('modal-msg');
+            const btn = document.getElementById('modal-btn');
+            
+            if (!modal || !msgDiv || !btn) {
+                console.warn("Modal elements missing.");
+                if(callback) callback(); 
+                return; 
+            }
+
+            msgDiv.innerHTML = msg;
+            modal.classList.remove('closed');
+            
+            // Clone button to remove old listeners
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                modal.classList.add('closed');
+                if (callback) callback();
+            });
+        }
+
+        function startEndGameSequence() {
+             const overlay = document.getElementById('celebration-overlay');
+             if(overlay) overlay.style.display = 'flex';
+             setTimeout(() => location.reload(), 10000);
+        }
+
+        // === ALL MAP DATA ===
+        // (Keep your components array and mountains array below this line...)
         // === ALL MAP DATA: FINAL PT, 24 RT, and 16 CITY PLACEMENT ===
 
         const components = [
@@ -909,18 +981,10 @@
 
         // --- Global State & UI Elements ---
         let rtStates = {}; 
+        let currentLevel = 1;
         let currentSolveState = 'custom';
-        const selectedPTSelect = document.getElementById('selectedPT');
-        const solveStateSelect = document.getElementById('solveState');
-        const bottomPtControlsDiv = document.getElementById('pt-control-bar'); 
-        const distancesDiv = document.getElementById('distances');
-        const coverageDetailsDiv = document.getElementById('coverageDetails');
-        const currentPTStatesDiv = document.getElementById('currentPTStates');
-        const coordinateOutputDiv = document.getElementById('coordinateOutput');
-
         let dragTarget = null;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
+        let dragOffsetX = 0, dragOffsetY = 0;
 
         // --- Console State ---
         let console1SelectedPT = 'PT-1'; // Default for Console 1
@@ -963,7 +1027,96 @@
                 selectPT(ptId);
             }
         }
-        
+  
+        // --- LEVEL LOGIC ---
+        const LEVELS = {
+            1: {
+                title:"FIX TOWERS",
+                text: "Power levels exceeded!<br>Ensure exactly seven towers are on.",
+                check: () => {
+                    // The towers that MUST be OFF
+                    const offIDs = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
+                    
+                    // Get currently active towers
+                    const activePTs = components.filter(c => c.type === 'PT' && c.active);
+                    const activeIDs = activePTs.map(c => c.id);
+                    
+                    // Condition 1: Count must be 7
+                    if (activePTs.length !== 7) return false;
+
+                    // Condition 2: None of the "Bad" towers should be in the active list
+                    const hasBadTowers = activeIDs.some(id => offIDs.includes(id));
+                    
+                    // If we have 7 towers AND none are bad, we strictly have the good 7 (1,2,3,7,8,9,11)
+                    return !hasBadTowers;
+                },
+                successMsg: "Station Towers back online!"
+            },
+            2: {
+                title: "POWER LEVELS",
+                text: "Adjust each tower’s power for optimal city coverage.",
+                check: () => {
+                    const activePTs = components.filter(c => c.type === 'PT' && c.active);
+                    // Check if ALL active PTs match their reqPower
+                    return activePTs.every(pt => pt.power === pt.reqPower);
+                },
+                successMsg: "Broadcasting to all cities!"
+            },
+            3: {
+                title: "TOWER CHANNELS",
+                text: "Set each tower’s channel # per Broadcast Guidelines.",
+                check: () => {
+                    const activePTs = components.filter(c => c.type === 'PT' && c.active);
+                    // Check: Does Channel setting match (RT Hits + 1)?
+                    return activePTs.every(pt => pt.reqChannel === (getPT_RT_HitCount(pt) + 1)); 
+                },
+                successMsg: "All cities receiving correct channel signals!"
+            },
+            4: {
+                title: "SYSTEM NOMINAL!",
+                text: "Bring your floppy disk to a QA technician to stamp & save your session data.",
+                check: () => false, // No auto-exit
+                successMsg: ""
+            }
+        };
+
+        function updateGameStatus() {
+            const lvlData = LEVELS[currentLevel];
+            if (!lvlData) return;
+
+            const indicator = document.getElementById('level-indicator');
+            const message = document.getElementById('console-message');
+            
+            if (indicator) indicator.textContent = lvlData.title;
+            if (message) message.innerHTML = lvlData.text;
+            
+            // Check Level Completion
+            if (currentLevel < 4 && lvlData.check()) {
+                showModal(lvlData.successMsg, () => {
+                    // Increment Level
+                    currentLevel++;
+                    
+                    // Apply the SETUP for the NEW level
+                    applySolveStatePresets('level' + currentLevel);
+                    
+                    // Update UI immediately
+                    updateControlPanel();
+
+                    if (currentLevel === 4) startEndGameSequence();
+                });
+            }
+        }
+
+        function startEndGameSequence() {
+             const overlay = document.getElementById('celebration-overlay');
+             if(overlay) overlay.classList.add('active');
+             
+             // 10 Second Timer
+             setTimeout(() => {
+                 location.reload(); 
+             }, 10000);
+        }
+
         // --- MODAL CONTROL ---
         function closeIntroModal() {
             const modal = document.getElementById('intro-modal');
@@ -1791,85 +1944,60 @@ const controlHTML = `
             const msgBox = document.getElementById('floating-message');
             if (!msgBox) return;
 
+            // 1. Get Level Data
+            const lvlData = LEVELS[currentLevel]; // Uses global currentLevel
+
+            // 2. Get Stats
             const activePTs = components.filter(c => c.type === 'PT' && c.active);
-
-            // 1a. Get City Coverage Data
             const cityData = getCityCoverage();
-            
-            // 1b. Calculate Total Power
             const totalPower = activePTs.reduce((sum, pt) => sum + pt.power, 0);
-
-            // 2. Check Channels (Are ALL active PTs hitting their exact required count?)
-            const allChannelsValid = activePTs.every(pt => getPT_RT_HitCount(pt) + 1 === pt.reqChannel);
-            const channelStatusColor = allChannelsValid ? '#00ff00' : '#ff3333';
-            const channelStatusText = allChannelsValid ? 'TRUE' : 'FALSE';
             
-            // 3. Check for "Bad" Towers
-            const badTowerIds = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12'];
-            const activeBadTowers = activePTs.filter(pt => badTowerIds.includes(pt.id));
-            
-            // 4. METER CALCULATION
-            // Logic: 0-22 fills first 75%. >22 fills the rest.
-            let meterWidth = 0;
-            let meterClass = '';
-            
-            if (totalPower <= 22) {
-                // Scale 0-22 to 0-75%
-                meterWidth = (totalPower / 22) * 75;
-                meterClass = ''; // Default Green
-            } else {
-                // Scale >22 to 75-100% (capped at 100%)
-                // We'll assume max "reasonable" power is roughly 42 before critical failure
-                meterWidth = 75 + ((totalPower - 22) / 20) * 25;
-                if (meterWidth > 100) meterWidth = 100;
-                meterClass = 'overload'; // Bright Orange
-            }
+            // 3. Build Header (Level Info)
+            let htmlContent = `<div style="border-bottom: 1px solid #0f0; margin-bottom: 5px; padding-bottom: 5px;">
+                <span style="color: #007bff; font-size: 1.5em;">${lvlData.title}</span><br>
+                <span style="color: #ff3333; animation: flash-red 1s infinite; font-size: 1.1em;">${lvlData.text}</span>
+            </div>`;
 
-            // 5. Build the HTML
-            let htmlContent = `ACTIVE TOWERS: ${activePTs.length}<br>`;
+/*
+            // 4. Build Stats
+            htmlContent += `ACTIVE TOWERS: ${activePTs.length}<br>`;
 
-            // NEW: City Coverage Color Logic
             const citiesCovered = cityData.coveredCities.length;
             const totalCities = cityData.totalCities;
-            const cityColor = (citiesCovered === totalCities) ? '#00ff00' : '#ff3333'; // Green if full, Red if missing
-            
+            const cityColor = (citiesCovered === totalCities) ? '#00ff00' : '#ff3333';
             htmlContent += `CITIES COVERED: <span style="color: ${cityColor}; font-weight: bold;">${citiesCovered}/${totalCities}</span><br>`;
 
-            htmlContent += `CHANNELS SET: <span style="color: ${channelStatusColor}; font-weight: bold;">${channelStatusText}</span><br>`;
-            
-            if (activeBadTowers.length > 0) {
-                htmlContent += `<span class="warning-text">⚠ RESTRICTED TOWERS: ${activeBadTowers.length}</span><br>`;
+            const allChannelsValid = activePTs.every(pt => (getPT_RT_HitCount(pt) + 1) === pt.reqChannel);
+            const channelColor = allChannelsValid ? '#00ff00' : '#ff3333';
+            const channelText = allChannelsValid ? 'TRUE' : 'FALSE';
+            htmlContent += `CHANNELS SET: <span style="color: ${channelColor}; font-weight: bold;">${channelText}</span><br>`;
+
+            // 5. Power Meter
+            let meterWidth = 0;
+            let meterClass = '';
+            if (totalPower <= 22) {
+                meterWidth = (totalPower / 22) * 75;
+            } else {
+                meterWidth = 75 + ((totalPower - 22) / 20) * 25;
+                if (meterWidth > 100) meterWidth = 100;
+                meterClass = 'overload'; 
             }
 
             htmlContent += `TOTAL POWER: ${totalPower}`;
-            
-            // Inject Meter
-            htmlContent += `
-                <div class="meter-container">
-                    <div class="meter-fill ${meterClass}" style="width: ${meterWidth}%;"></div>
-                </div>
-            `;
+            htmlContent += `<div class="meter-container"><div class="meter-fill ${meterClass}" style="width: ${meterWidth}%;"></div></div>`;
 
-            // 6. Determine System Status (Text)
             if (totalPower > 22) {
                 htmlContent += `<span style="color: #ff3333; animation: flash-red 1s infinite;">MAX POWER EXCEEDED!</span>`;
                 msgBox.style.borderColor = '#ff3333';
-                msgBox.style.color = '#ff3333';
             } else {
                 htmlContent += `<span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
                 msgBox.style.borderColor = '#00ff00';
-                msgBox.style.color = '#00ff00';
-            }
-
-            msgBox.innerHTML = htmlContent;
-/*
-            // Show warning if bad towers are active
-            if (activeBadTowers.length > 0) {
-                const badNums = activeBadTowers.map(t => t.id.split('-')[1]).join(', ');
-                htmlContent += `<span class="warning-text">⚠ RESTRICTED: ${badNums}</span><br>`;
             }
 */
+
+            msgBox.innerHTML = htmlContent;
         }
+
 
 
         // --- WIN CONDITION CHECK ---
@@ -1913,15 +2041,107 @@ const controlHTML = `
 
             updateFloatingMessage();
             checkWinCondition(); // <--- NEW CHECK
+            updateGameStatus();
         }
         
         function applySolveStatePresets(state) {
             currentSolveState = state;
+            const STATE1_OFF_IDS = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12']; 
 
-            // NEW: Updated to new PT-1, PT-2, etc. IDs
-            const STATE1_OFF_IDS = ['PT-4', 'PT-5', 'PT-6', 'PT-10', 'PT-12']; // D, E, F, J, L
-            const STATE2_IDS = ['PT-7', 'PT-8', 'PT-9', 'PT-10', 'PT-11', 'PT-12']; // State 2 is 7-12
+            // Helper: Reset all
+            const resetAll = () => components.filter(c => c.type === 'PT').forEach(pt => { pt.active = false; pt.power = 0; });
 
+            if (state === 'level1' || state === 'first') {
+                currentLevel = 1;
+                resetAll(); 
+                
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    // LOGIC: 7 & 8 are OFF. All others ON.
+                    if (['PT-7', 'PT-8'].includes(pt.id)) { 
+                        pt.active = false;
+                    } else {
+                        pt.active = true;
+                    }
+
+                    // Hardcoded "Broken" Values
+                    if (pt.id === 'PT-1')  { pt.power = 1; pt.reqChannel = 2; }
+                    if (pt.id === 'PT-2')  { pt.power = 3; pt.reqChannel = 4; }
+                    if (pt.id === 'PT-3')  { pt.power = 3; pt.reqChannel = 5; }
+                    if (pt.id === 'PT-4')  { pt.power = 4; pt.reqChannel = 3; }
+                    if (pt.id === 'PT-5')  { pt.power = 4; pt.reqChannel = 2; }
+                    if (pt.id === 'PT-6')  { pt.power = 4; pt.reqChannel = 5; }
+                    if (pt.id === 'PT-7')  { pt.reqChannel = 3; } 
+                    if (pt.id === 'PT-8')  { pt.reqChannel = 4; } 
+                    if (pt.id === 'PT-9')  { pt.power = 4; pt.reqChannel = 4; }
+                    if (pt.id === 'PT-10') { pt.power = 4; pt.reqChannel = 2; }
+                    if (pt.id === 'PT-11') { pt.power = 2; pt.reqChannel = 3; }
+                    if (pt.id === 'PT-12') { pt.power = 2; pt.reqChannel = 4; }
+                    
+                    if (pt.active) pt.lastPower = pt.power;
+                });
+            }
+            else if (state === 'level2') {
+                // LEVEL 2 SETUP: Correct Towers ON, Wrong Power
+                currentLevel = 2;
+                // Do NOT resetAll(); keep the active towers from Level 1
+                
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    if (!STATE1_OFF_IDS.includes(pt.id)) {
+                        pt.active = true;
+                        
+                        // CRITICAL: Force power to 1 (wrong) so the user has to fix it
+                        pt.power = 1; 
+                        pt.lastPower = 1;
+
+                        // Ensure Requirements are set correctly for the Win Condition
+                        if (pt.id === 'PT-1') pt.reqPower = 4;
+                        if (pt.id === 'PT-2') pt.reqPower = 1; // Note: B is 1
+                        if (pt.id === 'PT-3') pt.reqPower = 3; // Note: C is 3
+                        if (pt.id === 'PT-7') pt.reqPower = 4;
+                        if (pt.id === 'PT-8') pt.reqPower = 4;
+                        if (pt.id === 'PT-9') pt.reqPower = 2; // Note: I is 2
+                        if (pt.id === 'PT-11') pt.reqPower = 4;
+
+                    } else {
+                        pt.active = false;
+                        pt.power = 0;
+                    }
+                });
+            }
+            else if (state === 'level3') {
+                // LEVEL 3 SETUP: Correct Power, Wrong Channels
+                currentLevel = 3;
+                
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    if (!STATE1_OFF_IDS.includes(pt.id)) {
+                        pt.active = true;
+                        pt.power = pt.reqPower; // Correct Power (Auto-set from prev level)
+                        pt.lastPower = pt.power;
+
+                        // CRITICAL: Force Channel to 1 (Wrong) to force interaction
+                        pt.reqChannel = 1; 
+                    }
+                });
+            }
+            else if (state === 'level4') {
+                // LEVEL 4 SETUP: Full Solve
+                currentLevel = 4;
+                resetAll();
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    if (!STATE1_OFF_IDS.includes(pt.id)) {
+                        pt.active = true;
+                        pt.power = pt.reqPower;
+                        // Correct Channel = Hits + 1
+                        pt.reqChannel = getPT_RT_HitCount(pt) + 1; 
+                    }
+                });
+                startEndGameSequence();
+            }
+            
+            updateControlPanel();
+        }
+
+/*
             // 1. Reset ALL PTs 
             components.filter(c => c.type === 'PT').forEach(pt => {
                 pt.active = false;
@@ -1981,9 +2201,21 @@ const controlHTML = `
                     }
                 });
             }
-            
+            // Maintain custom/state1 options if needed for debugging
+            else if (state === 'state1') {
+                 components.filter(c => c.type === 'PT').forEach(pt => {
+                    if (!STATE1_OFF_IDS.includes(pt.id)) {
+                        pt.active = true;
+                        pt.power = pt.reqPower;
+                        pt.reqChannel = getPT_RT_HitCount(pt) + 1; 
+                    } else {
+                        pt.active = false;
+                    }
+                });
+            }
             updateControlPanel();
         }
+*/
 
 // Handle clicks inside the Game Consoles
 // --- GAME CONSOLE LOGIC ---
@@ -2179,7 +2411,7 @@ const controlHTML = `
             createManualControls(); 
             
             // Start on State 1
-            applySolveStatePresets('first'); 
+            applySolveStatePresets('level1'); 
 
             // Force the map to update immediately using the values you set in the HTML
             updateMapVisuals();
