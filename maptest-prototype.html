@@ -917,19 +917,19 @@
 
         const components = [
             // --- PTs 1-12 (Renamed from A-L) ---
-            { id: 'PT-1', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 5, lastPower: 4, highlight: false, reqCities: 3 }, 
-            { id: 'PT-2', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 1, highlight: false, reqCities: 1 },
-            { id: 'PT-3', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 4 }, 
-            { id: 'PT-4', type: 'PT', x: 24.0, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
-            { id: 'PT-5', type: 'PT', x: 24.0, y: 29.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
-            { id: 'PT-6', type: 'PT', x: 33.1, y: 20.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 3, highlight: false, reqCities: 1 }, 
+            { id: 'PT-1', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 3 }, 
+            { id: 'PT-2', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 1, highlight: false, reqCities: 1 },
+            { id: 'PT-3', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3, highlight: false, reqCities: 4 }, 
+            { id: 'PT-4', type: 'PT', x: 24.0, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-5', type: 'PT', x: 24.0, y: 29.5, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-6', type: 'PT', x: 33.1, y: 20.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 }, 
             
-            { id: 'PT-7', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
-            { id: 'PT-8', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 5 },
-            { id: 'PT-9', type: 'PT', x: 56.3, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 2, highlight: false, reqCities: 1 },
-            { id: 'PT-10', type: 'PT', x: 48.5, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 1 },
-            { id: 'PT-11', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 2 },
-            { id: 'PT-12', type: 'PT', x: 60.0, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 },
+            { id: 'PT-7', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-8', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 5 },
+            { id: 'PT-9', type: 'PT', x: 56.3, y: 29.0, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-10', type: 'PT', x: 48.5, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-11', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 2 },
+            { id: 'PT-12', type: 'PT', x: 60.0, y: 16.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3, highlight: false, reqCities: 1 },
 
             // --- REPEATER TOWERS (RTs) - (Total 15 RTs, Renamed A-O) ---
             { id: 'RT-A', type: 'RT', x: 6.8, y: 17.3 },
@@ -1057,8 +1057,24 @@
                 text: "Adjust each tower’s power for optimal city coverage.",
                 check: () => {
                     const activePTs = components.filter(c => c.type === 'PT' && c.active);
+                    // Hardcoded check for the correct power levels to ensure robust validation
+                    // PT-1:4, PT-2:1, PT-3:3, PT-7:4, PT-8:4, PT-9:2, PT-11:4
+                    const correctPowers = {
+                        'PT-1': 4, 'PT-2': 1, 'PT-3': 3, 'PT-7': 4, 
+                        'PT-8': 4, 'PT-9': 2, 'PT-11': 4
+                    };
                     // Check if ALL active PTs match their reqPower
-                    return activePTs.every(pt => pt.power === pt.reqPower);
+                    // return activePTs.every(pt => pt.power === pt.reqPower);
+
+                    // 1. Ensure all active PTs have the correct power
+                    const allCorrect = activePTs.every(pt => pt.power === correctPowers[pt.id]);
+                    
+                    // 2. Ensure we still have exactly the 7 correct towers
+                    const correctIDs = Object.keys(correctPowers);
+                    const activeIDs = activePTs.map(p => p.id);
+                    const hasCorrectTowers = activePTs.length === 7 && activeIDs.every(id => correctIDs.includes(id));
+
+                    return allCorrect && hasCorrectTowers;
                 },
                 successMsg: "Broadcasting to all cities!"
             },
@@ -1067,8 +1083,17 @@
                 text: "Set each tower’s channel # per Broadcast Guidelines.",
                 check: () => {
                     const activePTs = components.filter(c => c.type === 'PT' && c.active);
-                    // Check: Does Channel setting match (RT Hits + 1)?
-                    return activePTs.every(pt => pt.reqChannel === (getPT_RT_HitCount(pt) + 1)); 
+                    // Calculate dynamic requirement: Channel = RT Hits + 1
+                    // This validates against the MAP REALITY, not the stored variable.
+                    return activePTs.every(pt => {
+                        // Get physical hits from map
+                        let hits = getPT_RT_HitCount(pt);
+                        // Clamp logic to match the 1-4 button cycle
+                        if (hits < 1) hits = 1; 
+                        if (hits > 4) hits = 4;
+                        
+                        return pt.reqChannel === hits;
+                    });
                 },
                 successMsg: "All cities receiving correct channel signals!"
             },
@@ -1096,10 +1121,11 @@
                     // Increment Level
                     currentLevel++;
                     
-                    // Apply the SETUP for the NEW level
+                    // Apply Setup for the NEW level
+                    // This ensures that when entering Level 3, channels might reset or become "wrong"
                     applySolveStatePresets('level' + currentLevel);
                     
-                    // Update UI immediately
+                    // Update UI immediately to show new Level Title/Text
                     updateControlPanel();
 
                     if (currentLevel === 4) startEndGameSequence();
@@ -1270,7 +1296,7 @@
 
             let allReqsMet = true;
             const details = activePTs.map(pt => {
-                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                const liveChannel = getPT_RT_HitCount(pt);
                 const channelMet = (liveChannel === pt.reqChannel);
                 const cityCoverageMet = doesPtCoverAnyCity(pt, allActiveRTs);
 
@@ -1665,7 +1691,7 @@
             const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
 
             components.filter(c => c.type === 'PT').forEach(pt => {
-                const liveCh = getPT_RT_HitCount(pt) + 1;
+                const liveCh = getPT_RT_HitCount(pt);
                 const liveCity = getPTCityHitCount(pt, activeRTs); 
                 const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
                 const activeStatus = pt.active ? 'ON' : 'OFF'; // NEW: Capture active status
@@ -1796,7 +1822,7 @@
             const allPTs = components.filter(c => c.type === 'PT');
 
             allPTs.forEach(pt => {
-                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                const liveChannel = getPT_RT_HitCount(pt);
                 // FIX: Use the individual PT hit counter for initialization
                 const liveCityCount = getPTCityHitCount(pt); 
 // - to change over the affected boxes so you know which ones are bad signals when designing
@@ -1809,7 +1835,7 @@
                 }
                 
                 let channelOptions = '';
-                for (let c = 1; c <= 5; c++) {
+                for (let c = 1; c <= 4; c++) {
                     channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
                 }
                 
@@ -1906,7 +1932,7 @@ const controlHTML = `
          // Updates the UI state of the controls when data changes
         function updateManualControls() {
             components.filter(c => c.type === 'PT').forEach(pt => {
-                const liveChannel = getPT_RT_HitCount(pt) + 1;
+                const liveChannel = getPT_RT_HitCount(pt);
                 // FIX: Call the new individual hit counter
                 const liveCityCount = getPTCityHitCount(pt); 
                 
@@ -2064,18 +2090,18 @@ const controlHTML = `
                     }
 
                     // Hardcoded "Broken" Values
-                    if (pt.id === 'PT-1')  { pt.power = 1; pt.reqChannel = 2; }
-                    if (pt.id === 'PT-2')  { pt.power = 3; pt.reqChannel = 4; }
-                    if (pt.id === 'PT-3')  { pt.power = 3; pt.reqChannel = 5; }
-                    if (pt.id === 'PT-4')  { pt.power = 4; pt.reqChannel = 3; }
-                    if (pt.id === 'PT-5')  { pt.power = 4; pt.reqChannel = 2; }
-                    if (pt.id === 'PT-6')  { pt.power = 4; pt.reqChannel = 5; }
-                    if (pt.id === 'PT-7')  { pt.reqChannel = 3; } 
-                    if (pt.id === 'PT-8')  { pt.reqChannel = 4; } 
-                    if (pt.id === 'PT-9')  { pt.power = 4; pt.reqChannel = 4; }
-                    if (pt.id === 'PT-10') { pt.power = 4; pt.reqChannel = 2; }
-                    if (pt.id === 'PT-11') { pt.power = 2; pt.reqChannel = 3; }
-                    if (pt.id === 'PT-12') { pt.power = 2; pt.reqChannel = 4; }
+                    if (pt.id === 'PT-1')  { pt.power = 1; pt.reqChannel = 1; } 
+                    if (pt.id === 'PT-2')  { pt.power = 3; pt.reqChannel = 3; }
+                    if (pt.id === 'PT-3')  { pt.power = 3; pt.reqChannel = 4; }
+                    if (pt.id === 'PT-4')  { pt.power = 4; pt.reqChannel = 2; }
+                    if (pt.id === 'PT-5')  { pt.power = 4; pt.reqChannel = 1; }
+                    if (pt.id === 'PT-6')  { pt.power = 4; pt.reqChannel = 4; }
+                    if (pt.id === 'PT-7')  { pt.reqChannel = 2; } 
+                    if (pt.id === 'PT-8')  { pt.reqChannel = 3; } 
+                    if (pt.id === 'PT-9')  { pt.power = 4; pt.reqChannel = 3; }
+                    if (pt.id === 'PT-10') { pt.power = 4; pt.reqChannel = 1; }
+                    if (pt.id === 'PT-11') { pt.power = 2; pt.reqChannel = 2; }
+                    if (pt.id === 'PT-12') { pt.power = 2; pt.reqChannel = 3; }
                     
                     if (pt.active) pt.lastPower = pt.power;
                 });
@@ -2084,14 +2110,20 @@ const controlHTML = `
                 // LEVEL 2 SETUP: Correct Towers ON, Wrong Power
                 currentLevel = 2;
                 // Do NOT resetAll(); keep the active towers from Level 1
-                
+                // resetAll();
+             
+
                 components.filter(c => c.type === 'PT').forEach(pt => {
                     if (!STATE1_OFF_IDS.includes(pt.id)) {
+                        // DO NOT CHANGE pt.power here! Leave it as is.
+                        // Just ensure they are active.
                         pt.active = true;
                         
                         // CRITICAL: Force power to 1 (wrong) so the user has to fix it
                         pt.power = 1; 
                         pt.lastPower = 1;
+                        // Reset Channel to 1 to prepare for Level 3
+                        pt.reqChannel = 1;
 
                         // Ensure Requirements are set correctly for the Win Condition
                         if (pt.id === 'PT-1') pt.reqPower = 4;
@@ -2101,6 +2133,8 @@ const controlHTML = `
                         if (pt.id === 'PT-8') pt.reqPower = 4;
                         if (pt.id === 'PT-9') pt.reqPower = 2; // Note: I is 2
                         if (pt.id === 'PT-11') pt.reqPower = 4;
+
+                        
 
                     } else {
                         pt.active = false;
@@ -2131,8 +2165,10 @@ const controlHTML = `
                     if (!STATE1_OFF_IDS.includes(pt.id)) {
                         pt.active = true;
                         pt.power = pt.reqPower;
-                        // Correct Channel = Hits + 1
-                        pt.reqChannel = getPT_RT_HitCount(pt) + 1; 
+                        // Calculate Winning Channel
+                        let hits = getPT_RT_HitCount(pt);
+                        if (hits < 1) hits = 1; if(hits > 4) hits = 4;
+                        pt.reqChannel = hits; 
                     }
                 });
                 startEndGameSequence();
@@ -2269,11 +2305,12 @@ const controlHTML = `
                     if (newP === 0) pt.active = false;
 
                 } else if (target.id.includes('ch')) {
-                    let newC = pt.reqChannel + 1;
+                    //let newC = pt.reqChannel;
+                    let newC = (pt.reqChannel || 0) + 1;
                     // Cycle 2 -> 3 -> 4 -> 5 -> 2
-                    if (newC > 5) newC = 2; 
-                    // Safety catch: If currently 0 or 1, jump to 2
-                    if (newC < 2) newC = 2;
+                    if (newC > 4) newC = 1;
+                    // Safety catch if it was 0 or null
+                    //if (newC < 1) newC = 1; 
                     pt.reqChannel = newC;
                 }
 
@@ -2318,9 +2355,16 @@ const controlHTML = `
                 
                 // 4. Update Channel Button
                 const btnCh = document.getElementById(`${base}-ch`);
-                const chColors = ['#6c757d', '#28a745', '#17a2b8', '#007bff', '#6f42c1', '#ff69b4']; // Grey - 6c757d, Green (spaceholder) - 28a745, Cyan - 17a2b8, Blue - 007bff, Violet -  6f42c1, Pink - ff69b4, Green - 28a745,
+                // Index 0 is unused/grey. Indices 1-4 are the channel colors.
+                // Colors: 0=Grey, 1=Green, 2=Cyan, 3=Blue, 4=Violet
+                const chColors = ['#6c757d', '#28a745', '#17a2b8', '#007bff', '#6f42c1'];
+                // Grey - 6c757d, Green (spaceholder) - 28a745, Cyan - 17a2b8, Blue - 007bff, Violet -  6f42c1, Pink - ff69b4, Green - 28a745,
+                let displayCh = pt.reqChannel || 1;
+                if (displayCh > 4) displayCh = 1;
+
                 btnCh.textContent = `C${pt.reqChannel}`;
-                btnCh.style.backgroundColor = chColors[pt.reqChannel];
+                btnCh.style.backgroundColor = chColors[displayCh] || '#6c757d'; // Fallback grey
+                //btnCh.style.backgroundColor = chColors[pt.reqChannel];
             };
 
             // Run for both consoles
