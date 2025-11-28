@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pylon Placement Puzzle (64x36 Grid) - Dynamic Controls</title>
+    <style>
+        /* General layout and centering */
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #222;
+            color: #eee;
+            margin: 0;
+            padding: 0px;
+
+            gap: 0px; /* Reduced gap for tighter layout */
+        }
+        #top-container {
+            /* Fix: Use a container aligned with the map's width as the reference */
+            position: relative;
+            /* Ensure the overall page structure is centered based on the total block width */
+            width: 100%; /* 1024 (Map) + 300 (Sidebar) + 20 (Gap) */
+        }
+
+        /* Canvas dimensions: 16:9 ratio (1024x576) */
+        #map-and-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        canvas {
+            border: 1px solid #555;
+            background-color: #333;
+            width: 1024px;
+            height: 576px;
+            cursor: grab;
+        }
+        canvas.dragging {
+            cursor: grabbing;
+        }
+        #controls {
+            display: none;
+            background-color: #444;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            width: 300px;
+            margin-top: 0;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+        .control-group { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #555; }
+        .control-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input[type="range"], input[type="number"], button {
+            width: calc(100% - 10px); padding: 8px; margin-bottom: 10px; border-radius: 4px;
+            border: 1px solid #666; background-color: #555; color: #eee; appearance: none;
+        }
+        button { cursor: pointer; background-color: #007bff; border-color: #007bff; }
+        button:hover { background-color: #0056b3; border-color: #0056b3; }
+        h3 { margin-top: 0; color: #fff; }
+        .component-list { max-height: 200px; overflow-y: auto; background-color: #555; padding: 10px; border-radius: 4px; border: 1px solid #666; margin-top: 10px; }
+        .component-list div { padding: 3px 0; font-size: 0.9em; }
+
+        /* Validation Colors */
+        .pass { color: #0f0; }
+        .fail { color: lightcoral; }
+        .solved { font-weight: bold; font-size: 1.2em; color: #0f0; text-align: center; }
+        .not-solved { font-weight: bold; font-size: 1.2em; color: lightcoral; text-align: center; }
+
+        /* --- Legend Styles --- */
+        .legend-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 5px 0 0 0; /* Small top margin */
+        }
+        .legend-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            margin-right: 10px;
+            flex-shrink: 0;
+            border: 1px solid #888;
+        }
+        .pt-dot {
+            background-color: skyblue;
+            border-radius: 50%;
+        }
+        .rt-dot {
+            background-color: yellow;
+            border-radius: 50%;
+        }
+        .city-dot {
+            background-color: lightcoral;
+            border-radius: 50%;
+        }
+        .mountain-box {
+            background-color: rgba(0, 100, 0, 0.5);
+            border: 1px solid darkgreen;
+            border-radius: 0; /* Make it a box */
+            width: 16px; /* Slightly wider */
+        }
+
+        /* Style for the collapsible section */
+        #collapsible-controls.collapsed {
+              display: none;
+        }
+
+        /* --- PT Controls Bar Below Map --- */
+        #pt-control-bar {
+            width: 1024px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #333;
+            border-radius: 8px;
+            border: 1px solid #555;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px; /* Increased gap for 6 columns */
+            justify-content: flex-start;
+                        display: none;
+
+        }
+        .pt-control-box {
+            /* Calculated to fit 6 columns cleanly */
+            flex: 0 0 calc(1024px / 6 - 15px);
+            max-width: calc(1024px / 6 - 15px);
+            box-sizing: border-box;
+            background-color: #444;
+            padding: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        .pt-control-box h5 {
+            margin: 0;
+            color: skyblue;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        /* NEW: Restore dropdown arrow for select elements */
+        select {
+            appearance: auto;
+            -webkit-appearance: auto;
+            -moz-appearance: auto;
+
+            /* Custom arrow for dark mode */
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23EEEEEE%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.6-3.6%205.4-7.8%205.4-12.8%200-5-1.8-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right .7em top 50%;
+            background-size: .65em auto;
+
+            /* Adjust padding to make room for the new arrow */
+            padding-right: 2.5em;
+        }
+
+        /* New Highlight Style */
+       .pt-control-box.highlight {
+           background-color: #9f3679; /* A distinct pink/purple */
+           border-left-color: #ff69b4; /* Pink border */
+        }
+
+        .control-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+            font-size: 0.8em;
+        }
+        .control-status-row select, .control-status-row button {
+            width: 45%;
+            margin: 0;
+            padding: 2px;
+            font-size: 0.75em;
+        }
+        .live-ch-status {
+            font-weight: bold;
+            font-size: 0.8em;
+        }
+        .control-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="top-container">
+
+        <div id="map-and-controls">
+            <canvas id="networkCanvas" width="1024" height="576"></canvas>
+            <div id="pt-control-bar">
+                </div>
+        </div>
+
+        <div id="controls">
+            <h3>Pylon Puzzle Controls</h3>
+<div class="control-group">
+                <label for="solveState">Select Solve State:</label>
+                <select id="solveState">
+                    <option value="first">Initial State</option>
+                    <option value="state1">Solve State 1 (D,E,G,J,L Off)</option>
+ <!-- took this out -->
+ <!-- <option value="state2">Solve State 2 (TBD)</option> -->
+                    <option value="custom">Custom (Manual Control)</option>
+                </select>
+              <button id="toggle-collapse-btn" style="margin-top: 15px; background-color: #6c757d;">Show Advanced Details</button>
+                        </div>
+
+                    <div class="control-group" id="legend">
+                <label>Legend:</label>
+                <ul class="legend-list">
+                    <li><span class="legend-dot pt-dot"></span> PT-# = Broadcast Towers</li>
+                    <li><span class="legend-dot rt-dot"></span> RT# = Repeater Towers</li>
+                    <li><span class="legend-dot city-dot"></span> C# = Cities</li>
+                    <li><span class="legend-dot mountain-box"></span> = Mountains</li>
+                </ul>
+            </div>
+
+            <div id="collapsible-controls">
+
+                <label for="selectedPT">Select PT to Inspect:</label>
+                <select id="selectedPT"></select>
+
+            <div class="control-group">
+                <label>Coverage Summary:</label>
+                <div id="coverageDetails" class="component-list"></div>
+            </div>
+            <div class="control-group">
+                <label>Active PT Validation:</label>
+                <div id="currentPTStates" class="component-list"></div>
+            </div>
+            <div class="control-group">
+                <label>Distances from Selected PT:</label>
+                <div id="distances" class="component-list"></div>
+            </div>
+
+            <div class="control-group">
+                <label>Current Component Coordinates (X/Y):</label>
+                <div id="coordinateOutput" class="component-list">
+                    </div>
+           </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GLOBAL CONSTANTS & SETUP ---
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSizeX = 64;
+        const gridSizeY = 36;
+        const UNIT_PIXELS = canvas.height / gridSizeY; // 16
+        const canvasWidth = 1024;
+        const canvasHeight = 576;
+        const RT_FIXED_RADIUS = 4.0; // RTs fixed at 4.0U
+
+        // Radii Mapping: P3 = 5.0U, P4 = 7.0U
+        const powerRadii = { 0: 0.0, 1: 2.0, 2: 4.0, 3: 6.0, 4: 8.5 };
+
+        // === ALL MAP DATA: FINAL PT, 24 RT, and 16 CITY PLACEMENT ===
+
+        const components = [
+            // --- PTs A-L (12 Total) ---
+            { id: 'PT-A', type: 'PT', x: 11.0, y: 10.3, active: false, power: 0, reqPower: 4, reqChannel: 4, lastPower: 4, highlight: false, reqCities: 3 },
+            { id: 'PT-B', type: 'PT', x: 10.0, y: 28.2, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 1, highlight: false, reqCities: 1 },
+            { id: 'PT-C', type: 'PT', x: 19.9, y: 17.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 3, highlight: false, reqCities: 4 },
+            { id: 'PT-D', type: 'PT', x: 24.1, y: 5.7,  active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-E', type: 'PT', x: 24.0, y: 29.9, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-F', type: 'PT', x: 31.8, y: 23.5, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 3, highlight: false, reqCities: 1 },
+
+            { id: 'PT-G', type: 'PT', x: 36.7, y: 12.8, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 1, highlight: false, reqCities: 5 },
+            { id: 'PT-H', type: 'PT', x: 39.6, y: 28.6, active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 2, highlight: false, reqCities: 5 },
+            { id: 'PT-I', type: 'PT', x: 55.5, y: 29.1, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 2, highlight: false, reqCities: 1 },
+            { id: 'PT-J', type: 'PT', x: 47.0, y: 17.5, active: false, power: 0, reqPower: 4, reqChannel: 2, lastPower: 4, highlight: false, reqCities: 1 },
+            { id: 'PT-K', type: 'PT', x: 52.6, y: 9.0,  active: false, power: 0, reqPower: 4, reqChannel: 3, lastPower: 4, highlight: false, reqCities: 2 },
+            { id: 'PT-L', type: 'PT', x: 60.1, y: 17.4, active: false, power: 0, reqPower: 4, reqChannel: 1, lastPower: 3, highlight: false, reqCities: 1 },
+
+            // --- REPEATER TOWERS (RTs) - (Total 15 RTs) ---
+            { id: 'RT1', type: 'RT', x: 6.8, y: 17.3 },
+            { id: 'RT2', type: 'RT', x: 8.6, y: 29.1 },
+            { id: 'RT3', type: 'RT', x: 16.0, y: 4.1 },
+            { id: 'RT4', type: 'RT', x: 5.9, y: 3.8 },
+            { id: 'RT5', type: 'RT', x: 22.0, y: 12.9 },
+            { id: 'RT6', type: 'RT', x: 24.4, y: 21.1 },
+            { id: 'RT7', type: 'RT', x: 31.8, y: 6.5 },
+            { id: 'RT8', type: 'RT', x: 37.1, y: 21.1 },
+            { id: 'RT9', type: 'RT', x: 32.3, y: 29.9 },
+            { id: 'RT10', type: 'RT', x: 47.0, y: 25.5 },
+            { id: 'RT11', type: 'RT', x: 58.3, y: 31.2 },
+            { id: 'RT12', type: 'RT', x: 59.1, y: 13.6 },
+            { id: 'RT13', type: 'RT', x: 47.0, y: 3.4 },
+            { id: 'RT14', type: 'RT', x: 3.0, y: 10.9 },
+            { id: 'RT15', type: 'RT', x: 58.1, y: 3.5 },
+
+            // --- CITIES (C) - (Total 18 Cities) ---
+            { id: 'C1', type: 'C', x: 5.3, y: 20.2 },
+            { id: 'C2', type: 'C', x: 6.8, y: 32.0 },
+            { id: 'C3', type: 'C', x: 16.9, y: 22.2 },
+            { id: 'C4', type: 'C', x: 3.7, y: 1.6 },
+            { id: 'C5', type: 'C', x: 16.3, y: 0.7 },
+            { id: 'C6', type: 'C', x: 21.2, y: 10.0 },
+            { id: 'C7', type: 'C', x: 27.5, y: 19.7 },
+            { id: 'C8', type: 'C', x: 23.4, y: 24.5 },
+            { id: 'C9', type: 'C', x: 28.9, y: 4.2 },
+            { id: 'C10', type: 'C', x: 36.1, y: 17.6 },
+            { id: 'C11', type: 'C', x: 44.1, y: 16.7 },
+            { id: 'C12', type: 'C', x: 44.5, y: 10.7 },
+            { id: 'C13', type: 'C', x: 38.8, y: 24.4 },
+            { id: 'C14', type: 'C', x: 29.8, y: 27.3 },
+            { id: 'C15', type: 'C', x: 48.3, y: 23.4 },
+            { id: 'C16', type: 'C', x: 47.5, y: 29.4 },
+            { id: 'C17', type: 'C', x: 59.8, y: 34.2 },
+            { id: 'C18', type: 'C', x: 61.7, y: 11.5 }
+        ];
+
+        // === MOUNTAIN DATA (6 Smaller Rectangles, Unchanged) ===
+        const mountains = [
+            { id: 'M1', x: 10, y: 14, w: 4, h: 3 },
+            { id: 'M2', x: 14, y: 25, w: 4, h: 3 },
+            { id: 'M3', x: 28, y: 8, w: 4, h: 3 },
+            { id: 'M4', x: 32, y: 25, w: 4, h: 3 },
+            { id: 'M5', x: 50, y: 14, w: 4, h: 3 },
+            { id: 'M6', x: 50, y: 19, w: 4, h: 3 }
+        ];
+
+        // --- Global State & UI Elements ---
+        let rtStates = {};
+        let currentSolveState = 'custom';
+        const selectedPTSelect = document.getElementById('selectedPT');
+        const solveStateSelect = document.getElementById('solveState');
+        const bottomPtControlsDiv = document.getElementById('pt-control-bar');
+        const distancesDiv = document.getElementById('distances');
+        const coverageDetailsDiv = document.getElementById('coverageDetails');
+        const currentPTStatesDiv = document.getElementById('currentPTStates');
+        const coordinateOutputDiv = document.getElementById('coordinateOutput');
+
+        let dragTarget = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // --- CORE HANDLER FUNCTIONS (MUST BE DEFINED EARLY) ---
+
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.id.split('-')[2];
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
+
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    }
+                }
+                updateControlPanel();
+            }
+        }
+
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+
+        // Toggles active status
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                pt.active = !pt.active;
+
+                if (pt.active && pt.power === 0) {
+                    pt.power = 3;
+                }
+                if (!pt.active) {
+                    pt.power = 0;
+                }
+            }
+            updateControlPanel();
+        }
+
+        function selectPT(ptId) {
+            selectedPTSelect.value = ptId;
+            updateControlPanel();
+        }
+
+        // --- GEOMETRIC AND BLOCKING LOGIC (Unchanged) ---
+
+        function onSegment(p, q, r) {
+            return (q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+                    q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y));
+        }
+
+        function orientation(p, q, r) {
+            const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+            if (val === 0) return 0;
+            return (val > 0) ? 1 : 2;
+        }
+
+        function doIntersect(p1, q1, p2, q2) {
+            const o1 = orientation(p1, q1, p2);
+            const o2 = orientation(p1, q1, q2);
+            const o3 = orientation(p2, q2, p1);
+            const o4 = orientation(p2, q2, q1);
+            if (o1 !== o2 && o3 !== o4) { return true; }
+            if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+            if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+            if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+            if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+            return false;
+        }
+
+        function isPathBlocked(source, target) {
+            const p1 = { x: Number(source.x), y: Number(source.y) };
+            const q1 = { x: Number(target.x), y: Number(target.y) };
+
+            for (const mountain of mountains) {
+                const m = mountain;
+                const p_m1 = { x: m.x, y: m.y };
+                const p_m2 = { x: m.x + m.w, y: m.y };
+                const p_m3 = { x: m.x + m.w, y: m.y + m.h };
+                const p_m4 = { x: m.x, y: m.y + m.h };
+
+                if (doIntersect(p1, q1, p_m1, p_m2)) return true;
+                if (doIntersect(p1, q1, p_m2, p_m3)) return true;
+                if (doIntersect(p1, q1, p_m3, p_m4)) return true;
+                if (doIntersect(p1, q1, p_m4, p_m1)) return true;
+            }
+            return false;
+        }
+
+        function getDistance(c1, c2) {
+            return Math.sqrt(Math.pow(c1.x - c2.x, 2) + Math.pow(c1.y - c2.y, 2));
+        }
+
+        function isSignalSuccessful(source, target, range) {
+            const distance = getDistance(source, target);
+            if (distance > range) return false;
+            if (distance === 0) return false;
+            return !isPathBlocked(source, target);
+        }
+
+        // --- PUZZLE VALIDATION LOGIC (Unchanged) ---
+        function getPT_RT_HitCount(pt) {
+            if (!pt.active || pt.power === 0) { return 0; }
+            const ptRange = powerRadii[pt.power];
+            const rts = components.filter(c => c.type === 'RT');
+            let hitCount = 0;
+            rts.forEach(rt => {
+                if (isSignalSuccessful(pt, rt, ptRange)) { hitCount++; }
+            });
+            return hitCount;
+        }
+
+        // NEW: Calculates how many Cities are covered *by this specific PT*
+        function getPTCityHitCount(pt) {
+            if (!pt.active || pt.power === 0) return 0;
+
+            const ptRange = powerRadii[pt.power];
+            const cities = components.filter(c => c.type === 'C');
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            let hitCount = 0;
+
+            cities.forEach(city => {
+                // Check 1: Direct hit (PT -> City)
+                const isDirectHit = isSignalSuccessful(pt, city, ptRange);
+
+                // Check 2: Single hop hit (PT -> RT -> City)
+                const isIndirectHit = activeRTs.some(rt =>
+                    isSignalSuccessful(pt, rt, ptRange) && isSignalSuccessful(rt, city, RT_FIXED_RADIUS)
+                );
+
+                if (isDirectHit || isIndirectHit) {
+                    hitCount++;
+                }
+            });
+
+            return hitCount;
+        }
+
+        function doesPtCoverAnyCity(pt, allActiveRTs) {
+            if (!pt.active || pt.power === 0) return false;
+            const ptRange = powerRadii[pt.power];
+            const cities = components.filter(c => c.type === 'C');
+
+            const coversDirectly = cities.some(city => isSignalSuccessful(pt, city, ptRange));
+            if (coversDirectly) return true;
+
+            const hitRTs = allActiveRTs.filter(rt => isSignalSuccessful(pt, rt, ptRange));
+            if (hitRTs.length === 0) return false;
+
+            const coversIndirectly = cities.some(city =>
+                hitRTs.some(rt => isSignalSuccessful(rt, city, RT_FIXED_RADIUS))
+            );
+
+            return coversIndirectly;
+        }
+
+        function checkAllPuzzleRequirements(state) {
+            const activePTs = components.filter(c => c.type === 'PT' && c.active);
+            if (activePTs.length === 0) return { isSolved: false, details: [] };
+
+            const allActiveRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            let allReqsMet = true;
+            const details = activePTs.map(pt => {
+                const liveChannel = getPT_RT_HitCount(pt);
+                const channelMet = (liveChannel === pt.reqChannel);
+                const cityCoverageMet = doesPtCoverAnyCity(pt, allActiveRTs);
+
+                if (!channelMet || !cityCoverageMet) { allReqsMet = false; }
+
+                return { id: pt.id, liveChannel, reqChannel: pt.reqChannel, channelMet, cityCoverageMet };
+            });
+
+            return { isSolved: allReqsMet, details };
+        }
+
+        function getCityCoverage() {
+            const activeRTs = components.filter(rt => rt.type === 'RT' && rtStates[rt.id]);
+            const activePTs = components.filter(pt => pt.type === 'PT' && pt.active && pt.power > 0);
+
+            const allCities = components.filter(c => c.type === 'C');
+
+            const coveredCities = allCities.filter(city => {
+                const isHitByPT = activePTs.some(pt => isSignalSuccessful(pt, city, powerRadii[pt.power]));
+                if (isHitByPT) return true;
+                const isHitByRT = activeRTs.some(rt => isSignalSuccessful(rt, city, RT_FIXED_RADIUS));
+                return isHitByRT;
+            });
+
+            return { coveredCities, totalCities: allCities.length };
+        }
+
+        function updateRTStates() {
+            components.filter(c => c.type === 'RT').forEach(rt => rtStates[rt.id] = false);
+
+            const activePTs = components.filter(c => c.type === 'PT' && c.active && c.power > 0);
+
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                const isHitByAnyPT = activePTs.some(pt =>
+                    isSignalSuccessful(pt, rt, powerRadii[pt.power])
+                );
+                if (isHitByAnyPT) { rtStates[rt.id] = true; }
+            });
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 0.5;
+
+            for (let i = 0; i <= gridSizeX; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * UNIT_PIXELS, 0);
+                ctx.lineTo(i * UNIT_PIXELS, canvasHeight);
+                ctx.stroke();
+            }
+            for (let i = 0; i <= gridSizeY; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * UNIT_PIXELS);
+                ctx.lineTo(canvasWidth, i * UNIT_PIXELS);
+                ctx.stroke();
+            }
+
+            // Draw Mountains (Rectangular)
+            ctx.fillStyle = 'rgba(0, 100, 0, 0.5)';
+            ctx.strokeStyle = 'darkgreen';
+            ctx.lineWidth = 2;
+
+            mountains.forEach(mountain => {
+                const x = mountain.x * UNIT_PIXELS;
+                const y = mountain.y * UNIT_PIXELS;
+                const w = mountain.w * UNIT_PIXELS;
+                const h = mountain.h * UNIT_PIXELS;
+
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.fill();
+                ctx.stroke();
+            });
+        }
+
+        // HELPER: Draws the wedge fill
+        function drawWedge(ptX, ptY, pixelRadius, color, startAngle, endAngle) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(ptX, ptY);
+
+            if (startAngle > endAngle) {
+                ctx.arc(ptX, ptY, pixelRadius, startAngle, endAngle, false);
+            } else {
+                ctx.arc(ptX, ptY, pixelRadius, startAngle, endAngle);
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // RAYCASTING DRAW COMPONENTS - Using working logic
+        function drawComponents() {
+            drawGrid();
+
+            const angleStep = 0.5;
+            const fullCircle = 2 * Math.PI;
+
+            // --- 1. Draw all DOTTED CONCENTRIC RINGS (P1-P4) ---
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const center_x = pt.x * UNIT_PIXELS;
+                const center_y = pt.y * UNIT_PIXELS;
+
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Faint dotted white line
+
+                // Loop through P1 (index 1) to P4 (index 4)
+                for (let p = 1; p <= 4; p++) {
+                    const radius = powerRadii[p];
+                    if (radius <= 0) continue;
+
+                    const pixel_radius = radius * UNIT_PIXELS;
+
+                    ctx.setLineDash([3, 3]); // Dotted pattern
+                    ctx.beginPath();
+                    ctx.arc(center_x, center_y, pixel_radius, 0, fullCircle);
+                    ctx.stroke();
+                }
+                ctx.setLineDash([]); // Reset dash for the rest of the canvas
+            });
+            // --- END CONCENTRIC RING DRAW ---
+
+        function performRaycasting(component, isPT) {
+                const radius = isPT ? powerRadii[component.power] : RT_FIXED_RADIUS;
+                if (radius <= 0) return;
+                const center_x = component.x * UNIT_PIXELS;
+                const center_y = component.y * UNIT_PIXELS;
+                const pixel_radius = radius * UNIT_PIXELS;
+
+                let startAngle = 0;
+                let lastAngleWasClear = false;
+
+                // --- COLOR DEFINITIONS ---
+                // Default colors (Blue for PT, Yellow for RT)
+                let fill_color = isPT ? 'rgba(0, 191, 255, 0.08)' : 'rgba(255, 255, 0, 0.06)';
+                let border_color = isPT ? 'rgba(0, 191, 255, 0.6)' : 'rgba(255, 255, 0, 0.5)';
+                const blocked_color = isPT ? 'rgba(0, 100, 255, 0.1)' : 'rgba(255, 165, 0, 0.1)';
+
+                // --- HIGHLIGHT OVERRIDE ---
+                if (isPT && component.highlight) {
+                    // Override default colors with pink/magenta
+                    fill_color = 'rgba(255, 105, 180, 0.08)';
+                    border_color = 'rgba(255, 105, 180, 0.6)';
+                }
+
+                // Apply dashed line style if PT is highlighted (but only for the solid border draw)
+                if (isPT && component.highlight) {
+                    ctx.setLineDash([5, 3]); // Dashed line pattern
+                } else {
+                    ctx.setLineDash([]); // Solid line
+                }
+
+
+                for (let angle = 0; angle <= 360; angle += angleStep) {
+                    const currentRadians = angle * (Math.PI / 180);
+                    const prevRadians = (angle - angleStep) * (Math.PI / 180);
+
+                    const targetUnit = {
+                        x: center_x / UNIT_PIXELS + radius * Math.cos(currentRadians),
+                        y: center_y / UNIT_PIXELS + radius * Math.sin(currentRadians)
+                    };
+                    const isClear = !isPathBlocked(component, targetUnit);
+
+                    if (isClear) {
+                        if (!lastAngleWasClear) {
+                            startAngle = prevRadians;
+                        }
+
+                        // Draw the visible border segment (SOLID)
+                        ctx.strokeStyle = border_color;
+                        ctx.lineWidth = 1.5;
+
+                        const prev_x = center_x + pixel_radius * Math.cos(prevRadians);
+                        const prev_y = center_y + pixel_radius * Math.sin(prevRadians);
+                        const curr_x = center_x + pixel_radius * Math.cos(currentRadians);
+                        const curr_y = center_y + pixel_radius * Math.sin(currentRadians);
+
+                        ctx.beginPath();
+                        ctx.moveTo(prev_x, prev_y);
+                        ctx.lineTo(curr_x, curr_y);
+                        ctx.stroke();
+
+                    } else { // Signal is BLOCKED
+                        if (lastAngleWasClear) {
+                            // END of a clear path. Draw the filled wedge up to the boundary.
+                            drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, currentRadians);
+                        }
+
+                        // Draw faded segment (for the block)
+                        ctx.strokeStyle = blocked_color;
+                        ctx.lineWidth = 0.5;
+
+                        const near_x = center_x + (pixel_radius * 0.95) * Math.cos(prevRadians);
+                        const near_y = center_y + (pixel_radius * 0.95) * Math.sin(prevRadians);
+
+                        const edge_x = center_x + pixel_radius * Math.cos(currentRadians);
+                        const edge_y = center_y + pixel_radius * Math.sin(currentRadians);
+
+                        ctx.beginPath();
+                        ctx.moveTo(near_x, near_y);
+                        ctx.lineTo(edge_x, edge_y);
+                        ctx.stroke();
+                    }
+                    lastAngleWasClear = isClear;
+                }
+
+                // Handle wrap-around case (if the segment ends at 360 and started before 0)
+                if (lastAngleWasClear) {
+                    drawWedge(center_x, center_y, pixel_radius, fill_color, startAngle, fullCircle);
+                }
+
+                // Ensure dashed lines are reset after the component is drawn
+                ctx.setLineDash([]);
+            }
+
+            // 2. Execute raycasting draw
+            components.filter(c => c.type === 'PT' && c.active && c.power > 0).forEach(pt => {
+                performRaycasting(pt, true);
+            });
+
+            // 3. Draw ACTIVE RT ranges
+            components.filter(c => c.type === 'RT' && rtStates[c.id]).forEach(rt => {
+                performRaycasting(rt, false);
+            });
+
+            // 4. Draw components points and labels (Unchanged)
+            components.forEach(c => {
+                const center_x = c.x * UNIT_PIXELS;
+                const center_y = c.y * UNIT_PIXELS;
+
+                let color = 'white';
+                let size = 5;
+
+                if (c.type === 'PT') {
+                    color = c.active ? (c.power > 0 ? 'skyblue' : 'darkgray') : 'red';
+                    size = 7;
+                } else if (c.type === 'RT') {
+                    color = rtStates[c.id] ? 'yellow' : '#666';
+                    size = 6;
+                } else if (c.type === 'C') {
+                    color = 'lightcoral';
+                    size = 4;
+                }
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(center_x, center_y, size, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText(c.id, center_x + size + 2, center_y + 3);
+            });
+        }
+
+        // --- DRAG LOGIC ---
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) / UNIT_PIXELS,
+                y: (evt.clientY - rect.top) / UNIT_PIXELS
+            };
+        }
+
+        function isPointInComponent(point, component) {
+            const size = component.type === 'PT' ? 0.8 : (component.type === 'RT' ? 0.6 : 0.4);
+            const dist = getDistance(point, component);
+            return dist <= size;
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const mousePos = getMousePos(canvas, e);
+
+            const orderedComponents = components.filter(c => c.type === 'C').concat(
+                components.filter(c => c.type === 'RT'),
+                components.filter(c => c.type === 'PT')
+            );
+
+            dragTarget = orderedComponents.find(c => isPointInComponent(mousePos, c));
+
+            if (dragTarget) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                canvas.classList.add('dragging');
+                dragOffsetX = mousePos.x - dragTarget.x;
+                dragOffsetY = mousePos.y - dragTarget.y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (dragTarget) {
+                const mousePos = getMousePos(canvas, e);
+                let newX = mousePos.x - dragOffsetX;
+                let newY = mousePos.y - dragOffsetY;
+
+                // Clamp to grid boundaries
+                newX = Math.max(0.0, Math.min(gridSizeX, newX));
+                newY = Math.max(0.0, Math.min(gridSizeY, newY));
+
+                // Update component position
+                dragTarget.x = parseFloat(newX.toFixed(1));
+                dragTarget.y = parseFloat(newY.toFixed(1));
+
+                updateControlPanel();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (dragTarget) {
+                dragTarget = null;
+                canvas.classList.remove('dragging');
+            }
+        });
+
+        // --- UI/Logic Functions (Validation & Status) ---
+
+        // Updates the PT object when a dropdown is changed
+        function updatePTSetting(selectElement, type) {
+
+            // FIX: Use the 'data-pt-id' attribute to get the correct ID,
+            // instead of splitting the 'id' string.
+            const ptId = selectElement.getAttribute('data-pt-id');
+            const newValue = parseInt(selectElement.value);
+
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                if (type === 'power') {
+                    pt.power = newValue;
+                    pt.active = newValue > 0;
+                    // FIX 1: Save the manual power to lastPower
+                    if (newValue > 0) {
+                        pt.lastPower = newValue;
+                    }
+                } else if (type === 'reqChannel') {
+                    pt.reqChannel = newValue;
+                }
+            }
+            updateControlPanel();
+        }
+
+
+        // --- Function: togglePT (around line 748) ---
+        function togglePT(ptId) {
+            const pt = components.find(c => c.id === ptId);
+            if (pt) {
+                if (currentSolveState !== 'custom') {
+                    solveStateSelect.value = 'custom';
+                    currentSolveState = 'custom';
+                }
+
+                if (pt.active) {
+                    // ACTION: Turning OFF. Save current power, set active/power to 0.
+                    pt.lastPower = pt.power; // Save active power
+                    pt.active = false;
+                    pt.power = 0;
+                } else {
+                    // ACTION: Turning ON. Restore the last saved power.
+                    pt.active = true;
+                    pt.power = pt.lastPower || pt.reqPower; // Use lastPower, default to reqPower
+                }
+            }
+            updateControlPanel();
+        }
+
+        // New: Outputs the current coordinates and power of all components for easy copying.
+        function updateCoordinateOutput() {
+            const outputDiv = document.getElementById('coordinateOutput');
+            let output = '<b>PT Coordinates (X, Y, Pwr, Req Ch/City, Live Hits):</b><br>';
+
+            // Get active RTs for accurate City Coverage check
+            const activeRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]);
+
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const liveCh = getPT_RT_HitCount(pt);
+                const liveCity = getPTCityHitCount(pt, activeRTs);
+                const powerDisplay = pt.power > 0 ? pt.power : (pt.lastPower || pt.reqPower);
+                const activeStatus = pt.active ? 'ON' : 'OFF'; // NEW: Capture active status
+
+                output += `<div>{ id: '${pt.id}', x: ${pt.x.toFixed(1)}, y: ${pt.y.toFixed(1)}, active: '${activeStatus}', reqP: ${pt.reqPower}, reqCh: ${pt.reqChannel}, reqCity: ${pt.reqCities}, liveP: ${powerDisplay}, liveCh: ${liveCh}, liveCity: ${liveCity} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+
+            output += '<b>RT Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                output += `<div>{ id: '${rt.id}', type: 'RT', x: ${rt.x.toFixed(1)}, y: ${rt.y.toFixed(1)} },</div>`;
+            });
+            output += '<hr style="border-color:#555">';
+
+            output += '<b>City Coordinates (X, Y):</b><br>';
+            components.filter(c => c.type === 'C').forEach(city => {
+                output += `<div>{ id: '${city.id}', type: 'C', x: ${city.x.toFixed(1)}, y: ${city.y.toFixed(1)} },</div>`;
+            });
+
+            outputDiv.innerHTML = output;
+        }
+
+        function updateAllDistances() {
+            const selectedPTId = selectedPTSelect.value;
+            const pt = components.find(c => c.id === selectedPTId);
+            if (!pt) return;
+
+            distancesDiv.innerHTML = '';
+
+            components.filter(c => c.type === 'RT').forEach(rt => {
+                const dist = getDistance(pt, rt).toFixed(2);
+                const isSignal = isSignalSuccessful(pt, rt, powerRadii[pt.power]);
+                const status = rtStates[rt.id] ? `<span class="rt-active">(ON)</span>` : `<span class="rt-inactive">(OFF)</span>`;
+
+                let hitStatus;
+                if (isSignal) {
+                    hitStatus = `<span class="pass">HIT (Clear)</span>`;
+                } else if (getDistance(pt, rt) <= powerRadii[pt.power]) {
+                    hitStatus = `<span class="fail">BLOCKED!</span>`;
+                } else {
+                    hitStatus = `<span class="fail">MISS (Out of Range)</span>`;
+                }
+
+                distancesDiv.innerHTML += `<div>${rt.id}: ${dist} units ${status} ${hitStatus}</div>`;
+            });
+
+            distancesDiv.innerHTML += `<hr style="border-color:#555">`;
+
+            components.filter(c => c.type === 'C').forEach(city => {
+                const dist = getDistance(pt, city).toFixed(2);
+                const isSignal = isSignalSuccessful(pt, city, powerRadii[pt.power]);
+
+                let hitStatus;
+                if (isSignal) {
+                    hitStatus = `<span class="pass">Direct Hit (Clear)</span>`;
+                } else if (getDistance(pt, city) <= powerRadii[pt.power]) {
+                    hitStatus = `<span class="fail">BLOCKED!</span>`;
+                } else {
+                    hitStatus = `<span class="fail">Miss (Out of Range)</span>`;
+                }
+
+                distancesDiv.innerHTML += `<div>${city.id}: ${dist} units - ${hitStatus}</div>`;
+            });
+        }
+
+        function updateCoverageDetails() {
+            const { coveredCities, totalCities } = getCityCoverage();
+            const totalActiveRTs = components.filter(c => c.type === 'RT' && rtStates[c.id]).length;
+            const totalActivePTs = components.filter(c => c.type === 'PT' && c.active && c.power > 0).length;
+
+            const validation = checkAllPuzzleRequirements(currentSolveState);
+
+            let summaryHTML = '';
+            if (currentSolveState === 'custom') {
+                summaryHTML = `<div class="not-solved">CUSTOM MODE</div>`;
+            } else if (validation.isSolved) {
+                summaryHTML = `<div class="solved">STATE ${currentSolveState === 'state1' ? '1' : '2'} SOLVED!</div>`;
+            } else {
+                summaryHTML = `<div class="not-solved">STATE ${currentSolveState === 'state1' ? '1' : '2'} NOT SOLVED</div>`;
+            }
+
+            coverageDetailsDiv.innerHTML = `
+                ${summaryHTML}
+                <hr style="border-color:#555">
+                <div>**Cities Covered:** <span class="pass">${coveredCities.length}</span> / ${totalCities}</div>
+                <div>Active PTs (Total): ${totalActivePTs}</div>
+                <div>Active RTs (Total): ${totalActiveRTs}</div>
+            `;
+        }
+
+        function updateCurrentPTStates() {
+            currentPTStatesDiv.innerHTML = '';
+            const validation = checkAllPuzzleRequirements(currentSolveState);
+
+            components.filter(c => c.type === 'PT' && c.active).forEach(pt => {
+                const ptValidation = validation.details.find(d => d.id === pt.id);
+                if (!ptValidation) return;
+
+                const { liveChannel, reqChannel, channelMet, cityCoverageMet } = ptValidation;
+
+                const channelStatus = channelMet
+                    ? `<span class="pass">Ch: ${liveChannel}/${reqChannel} ✅</span>`
+                    : `<span class="fail">Ch: ${liveChannel}/${reqChannel} ❌</span>`;
+
+                const cityStatus = cityCoverageMet
+                    ? `<span class="pass">City ✅</span>`
+                    : `<span class="fail">City ❌</span>`;
+
+                currentPTStatesDiv.innerHTML += `
+                    <div>
+                        ${pt.id} (P${pt.power}) - ${channelStatus} | ${cityCoverageMet ? '' : `<span class="fail">NO CITY COVERAGE</span>`}
+                    </div>`;
+            });
+
+            components.filter(c => c.type === 'PT' && !c.active).forEach(pt => {
+                currentPTStatesDiv.innerHTML += `
+                    <div style="color:#666">
+                        ${pt.id} (P${pt.power}) - Inactive
+                    </div>`;
+            });
+
+            updateManualControls();
+        }
+
+        // Renders the dropdown controls for all 12 PTs below the map
+        function createManualControls() {
+            bottomPtControlsDiv.innerHTML = '';
+            const allPTs = components.filter(c => c.type === 'PT');
+
+            allPTs.forEach(pt => {
+                const liveChannel = getPT_RT_HitCount(pt);
+                // FIX: Use the individual PT hit counter for initialization
+                const liveCityCount = getPTCityHitCount(pt);
+// - to change over the affected boxes so you know which ones are bad signals when designing
+//                const highlightClass = pt.highlight ? 'highlight' : '';
+                const highlightClass = ''; // Apply highlight class
+
+                let powerOptions = '';
+                for (let p = 0; p <= 4; p++) {
+                    powerOptions += `<option value="${p}" ${pt.power === p ? 'selected' : ''}>P${p}</option>`;
+                }
+
+                let channelOptions = '';
+                for (let c = 1; c <= 4; c++) {
+                    channelOptions += `<option value="${c}" ${pt.reqChannel === c ? 'selected' : ''}>Req ${c}</option>`;
+                }
+
+                // NEW: Options for required Cities (set max to 5)
+                let reqCitiesOptions = '';
+                for (let c = 1; c <= 5; c++) {
+                    reqCitiesOptions += `<option value="${c}" ${pt.reqCities === c ? 'selected' : ''}>Req C ${c}</option>`;
+                }
+
+const controlHTML = `
+                    <div class="pt-control-box ${highlightClass}" id="ctrl-${pt.id}" onclick="selectPT('${pt.id}')">
+                        <h5>${pt.id}</h5>
+
+                        <div class="control-status-row">
+                            <button id="toggle-${pt.id}" data-pt-id="${pt.id}">
+                                ${pt.active ? 'Active' : 'Inactive'}
+                            </button>
+                            <select id="pwr-sel-${pt.id}" data-pt-id="${pt.id}" data-type="power">
+                                ${powerOptions}
+                            </select>
+                        </div>
+
+                        <div class="control-status-row">
+                            <select id="req-ch-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqChannel">
+                                ${channelOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-ch-val-${pt.id}">L: ${liveChannel}</span>
+                        </div>
+
+                        <div class="control-status-row">
+                            <select id="req-cities-sel-${pt.id}" data-pt-id="${pt.id}" data-type="reqCities">
+                                ${reqCitiesOptions}
+                            </select>
+                            <span class="live-ch-status" id="live-city-val-${pt.id}">C: ${getPTCityHitCount(pt)}</span>
+                        </div>
+                    </div>
+                `;
+                bottomPtControlsDiv.innerHTML += controlHTML;
+            });
+
+            // Add event listeners (unchanged)
+            bottomPtControlsDiv.addEventListener('change', handleControlChange);
+            bottomPtControlsDiv.addEventListener('click', handleControlClick);
+
+            updateManualControls();
+        }
+
+        // --- NEW DELEGATED EVENT HANDLERS ---
+
+        function handleControlChange(event) {
+            const target = event.target;
+            if (target.tagName === 'SELECT') {
+                const ptId = target.getAttribute('data-pt-id');
+                const type = target.getAttribute('data-type');
+                const newValue = parseInt(target.value);
+
+                const pt = components.find(c => c.id === ptId);
+                if (pt) {
+                    if (currentSolveState !== 'custom') {
+                        solveStateSelect.value = 'custom';
+                        currentSolveState = 'custom';
+                    }
+
+                    if (type === 'power') {
+                        pt.power = newValue;
+                        pt.active = newValue > 0;
+                        if (newValue > 0) { pt.lastPower = newValue; }
+                    } else if (type === 'reqChannel') {
+                        pt.reqChannel = newValue;
+                    } else if (type === 'reqCities') { // NEW: Handle required cities
+                        pt.reqCities = newValue;
+                    }
+                }
+                updateControlPanel();
+            }
+        }
+
+        function handleControlClick(event) {
+            const target = event.target;
+            if (target.tagName === 'BUTTON' && target.id.startsWith('toggle-')) {
+                const ptId = target.getAttribute('data-pt-id');
+                togglePT(ptId);
+            } else if (target.closest('.pt-control-box')) {
+                const ptId = target.closest('.pt-control-box').id.split('-')[1];
+                selectPT(ptId);
+            }
+        }
+
+        function selectPT(ptId) {
+            selectedPTSelect.value = ptId;
+            updateControlPanel();
+        }
+
+         // Updates the UI state of the controls when data changes
+        function updateManualControls() {
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const liveChannel = getPT_RT_HitCount(pt);
+                // FIX: Call the new individual hit counter
+                const liveCityCount = getPTCityHitCount(pt);
+
+                const powerSelect = document.getElementById(`pwr-sel-${pt.id}`);
+                const channelSelect = document.getElementById(`req-ch-sel-${pt.id}`);
+                const reqCitySelect = document.getElementById(`req-city-sel-${pt.id}`);
+                const toggleBtn = document.getElementById(`toggle-${pt.id}`);
+                const liveChSpan = document.getElementById(`live-ch-val-${pt.id}`);
+                const liveCitySpan = document.getElementById(`live-city-val-${pt.id}`);
+
+                // Update live data and visual state
+                if (liveChSpan) liveChSpan.textContent = liveChannel;
+                if (liveCitySpan) liveCitySpan.textContent = liveCityCount; // UPDATE CITY COUNT
+
+                if (toggleBtn) {
+                    toggleBtn.textContent = pt.active ? 'Active' : 'Inactive';
+                    toggleBtn.style.backgroundColor = pt.active ? '#28a745' : '#dc3545';
+                }
+
+                // Ensure dropdown values match the PT object state
+                if (powerSelect) powerSelect.value = pt.power;
+                if (channelSelect) channelSelect.value = pt.reqChannel;
+                if (reqCitySelect) reqCitySelect.value = pt.reqCities;
+            });
+        }
+
+        function updateControlPanel() {
+            updateRTStates();
+            drawComponents();
+            updateAllDistances();
+            updateCoverageDetails();
+            updateCurrentPTStates();
+            updateCoordinateOutput();
+        }
+
+        function applySolveStatePresets(state) {
+            currentSolveState = state;
+
+            const STATE1_OFF_IDS = ['PT-D', 'PT-E', 'PT-F', 'PT-J', 'PT-L'];
+            const STATE2_IDS = ['PT-F', 'PT-H', 'PT-I', 'PT-J', 'PT-K', 'PT-L']; // State 2 is G-L
+
+            // 1. Reset ALL PTs
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                pt.active = false;
+                pt.power = 0;
+                // Note: reqChannel and lastPower are persistent and not reset here
+            });
+
+            if (state === 'first') {
+                // NEW: FIRST SETTING (STARTUP) - 10 ON, 2 OFF
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    // Set Active Status
+                    if (['PT-G', 'PT-H'].includes(pt.id)) {
+                        pt.active = false;
+                        pt.power = 0;
+                    } else {
+                        pt.active = true;
+                        // Set specific power level from user list
+                        if (pt.id === 'PT-A') pt.power = 1;
+                        if (pt.id === 'PT-B') pt.power = 3;
+                        if (pt.id === 'PT-C') pt.power = 2;
+                        if (pt.id === 'PT-D') pt.power = 4;
+                        if (pt.id === 'PT-E') pt.power = 4;
+                        if (pt.id === 'PT-F') pt.power = 4;
+                        if (pt.id === 'PT-I') pt.power = 4;
+                        if (pt.id === 'PT-J') pt.power = 4;
+                        if (pt.id === 'PT-K') pt.power = 2;
+                        if (pt.id === 'PT-L') pt.power = 2;
+                    }
+                });
+            } else if (state === 'state1') {
+                // SOLVE STATE 1: PT-D, E, F, J, L are OFF (7 PTs ON)
+                components.filter(c => c.type === 'PT').forEach(pt => {
+                    const isActive = ['PT-A', 'PT-B', 'PT-C', 'PT-G', 'PT-H', 'PT-I', 'PT-K'].includes(pt.id);
+
+                    if (isActive) {
+                        pt.active = true;
+                        // Synchronize required properties to the final solve state:
+                        if (pt.id === 'PT-A') { pt.reqPower = 4; pt.reqChannel = 4; pt.reqCities = 3; pt.power = 4; }
+                        if (pt.id === 'PT-B') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 1; }
+                        if (pt.id === 'PT-C') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 4; pt.power = 3; }
+                        if (pt.id === 'PT-G') { pt.reqPower = 4; pt.reqChannel = 2; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-H') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 5; pt.power = 4; }
+                        if (pt.id === 'PT-I') { pt.reqPower = 4; pt.reqChannel = 1; pt.reqCities = 1; pt.power = 2; }
+                        if (pt.id === 'PT-K') { pt.reqPower = 4; pt.reqChannel = 3; pt.reqCities = 2; pt.power = 4; }
+                    } else {
+                        // Inactive PTs: D, E, F, J, L
+                        pt.active = false;
+                        pt.power = 0;
+                    }
+                });
+            } else if (state === 'state2') {
+                STATE2_IDS.forEach(id => {
+                    const pt = components.find(c => c.id === id);
+                    if (pt) {
+                        pt.active = true;
+                        pt.power = pt.reqPower;
+                    }
+                });
+            }
+
+            updateControlPanel();
+        }
+
+        function initialize() {
+            // Populate the "Select PT to Inspect" dropdown
+            components.filter(c => c.type === 'PT').forEach(pt => {
+                const option = document.createElement('option');
+                option.value = pt.id;
+                option.textContent = pt.id;
+                selectedPTSelect.appendChild(option);
+            });
+
+            selectedPTSelect.addEventListener('change', updateControlPanel);
+            solveStateSelect.addEventListener('change', (event) => {
+                applySolveStatePresets(event.target.value);
+            });
+
+            // Create the list of manual PT controls once
+            createManualControls();
+
+            // Start on State 1 to ensure a functional initial state
+            applySolveStatePresets('first');
+
+            // --- Collapsible Controls Logic ---
+            const toggleBtn = document.getElementById('toggle-collapse-btn');
+            const collapsibleControls = document.getElementById('collapsible-controls');
+
+            // Start collapsed by default
+            collapsibleControls.classList.add('collapsed');
+            toggleBtn.textContent = 'Show Advanced Details';
+
+            toggleBtn.addEventListener('click', () => {
+                collapsibleControls.classList.toggle('collapsed');
+                if (collapsibleControls.classList.contains('collapsed')) {
+                    toggleBtn.textContent = 'Show Advanced Details';
+                } else {
+                    toggleBtn.textContent = 'Hide Advanced Details';
+                }
+            });
+            // --- End of Collapsible Controls Logic ---
+        }
+
+        // --- RUN INITIALIZATION ---
+        initialize();
+    </script>
+</body>
+</html>
