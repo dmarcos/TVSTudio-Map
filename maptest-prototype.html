@@ -145,7 +145,7 @@
             height: 8px;
             background-color: #222;
             border: 1px solid #555;
-            margin-top: 2px;
+            margin-top: 1px;
             margin-bottom: 2px; /* Space before the Status text */
             border-radius: 2px;
             overflow: hidden;
@@ -208,7 +208,7 @@
             /* Visual Styles */
             font-family: 'LoRes 9 Plus OT Wide', sans-serif; /* Use the custom font */
             color: #00ff00; /* Bright Green text */
-            font-size: 0.8em;
+            font-size: 0.75em;
             font-weight: bold;
             text-shadow: 0 0 5px rgba(0, 255, 0, 0.8); /* Glowing text effect */
             background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black box */
@@ -1971,6 +1971,7 @@ const controlHTML = `
             const channelColor = allChannelsValid ? '#00ff00' : '#ff3333';
             const channelText = allChannelsValid ? 'TRUE' : 'FALSE';
             htmlContent += `CHANNELS SET: <span style="color: ${channelColor}; font-weight: bold;">${channelText}</span><br>`;
+*/
 
             // 5. Power Meter
             let meterWidth = 0;
@@ -1993,7 +1994,6 @@ const controlHTML = `
                 htmlContent += `<span style="color: #00ff00;">SYSTEM POWER NOMINAL</span>`;
                 msgBox.style.borderColor = '#00ff00';
             }
-*/
 
             msgBox.innerHTML = htmlContent;
         }
