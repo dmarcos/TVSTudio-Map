@@ -50,9 +50,9 @@ allow_anonymous true
 
 We use a library called [paho](https://github.com/eclipse-paho/paho.mqtt.javascript) that enables web applications to connect to the mosquitto MQTT broker using WebSockets
 
-You can find an example in:
+Based on a [StackOverflow question](https://stackoverflow.com/questions/70128563/mosquitto-and-simple-paho-js-client) I incorporated some test code in one of the [broadcast map tests](https://github.com/dmarcos/TVSTudio-Map/blob/main/maptest6.html#L261)
 
-https://stackoverflow.com/questions/70128563/mosquitto-and-simple-paho-js-client
+
 
 
 
